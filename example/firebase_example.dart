@@ -29,16 +29,17 @@ void main() async {
     print(e);
   }
 
+
   FirebaseAuth.instance.signInState.listen((event) {
-    print(event);
+    print("Sign in state: $event");
   });
 
   Firestore.instance.collection("users").stream.listen((event) {
-    print(event);
+    print("User collection: $event");
   });
 
   var user = await FirebaseAuth.instance.getUser();
-  print(user.toString());
+  print("User: ${user.toString()}");
 
   final document =
       await Firestore.instance.collection("users").add(user.toMap());
@@ -49,9 +50,9 @@ void main() async {
     },
   );
 
-  print(document);
+  print("Document: $document");
   var read = auth.User.fromMap(document.map);
-  print(read);
+  print("Read: $read");
 
   await Firestore.instance.collection("users").document(document.id).delete();
 
