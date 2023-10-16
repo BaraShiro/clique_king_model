@@ -2,6 +2,7 @@ import 'package:bloc/bloc.dart';
 import 'package:clique_king_model/clique_king_model.dart';
 import 'package:clique_king_model/src/models/clique.dart';
 import 'package:clique_king_model/src/models/user.dart';
+import 'package:clique_king_model/src/models/score.dart';
 import 'package:clique_king_model/src/repositories/clique_repository.dart';
 import 'package:meta/meta.dart';
 
@@ -25,9 +26,12 @@ final class CliqueLoadingInProgress extends CliqueState {}
 
 final class CliqueLoadingSuccess extends CliqueState {
   final Clique clique;
-  final List<User> participants;
+  final List<Score> allScoresSorted;
 
-  CliqueLoadingSuccess({required this.clique, required this.participants});
+  CliqueLoadingSuccess({
+    required this.clique,
+    required this.allScoresSorted,
+  });
 }
 
 final class CliqueLoadingFailure extends CliqueState {}
