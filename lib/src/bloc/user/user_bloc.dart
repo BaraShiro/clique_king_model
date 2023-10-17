@@ -57,7 +57,38 @@ final class UserLoginFailure extends UserState {
   List<Object?> get props => [];
 }
 
-// TODO: Registration states?
+final class UserRegisterInProgress extends UserState {
+  @override
+  List<Object?> get props => [];
+}
+
+final class UserRegisterSuccess extends UserState {
+  final User user;
+
+  UserRegisterSuccess({required this.user});
+  @override
+  List<Object?> get props => [];
+}
+
+final class UserRegisterFailure extends UserState {
+  @override
+  List<Object?> get props => [];
+}
+
+final class UserLogoutSuccess extends UserState {
+  @override
+  List<Object?> get props => [];
+}
+
+final class UserDeleteSuccess extends UserState {
+  @override
+  List<Object?> get props => [];
+}
+
+// final class UserDeleteFailure extends UserState {
+//   @override
+//   List<Object?> get props => [];
+// }
 
 final class UserBloc extends Bloc<UserEvent, UserState> {
   final UserRepository _userRepo; // passed in so it can be easily mocked
