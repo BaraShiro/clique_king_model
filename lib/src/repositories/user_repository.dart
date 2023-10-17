@@ -2,7 +2,7 @@ import 'package:firedart/firedart.dart';
 import 'package:meta/meta.dart';
 
 @immutable
-final class UserRepository {
+class UserRepository {
   final Firestore store; // pass it in so it can be mocked.
 
   UserRepository({required this.store});
