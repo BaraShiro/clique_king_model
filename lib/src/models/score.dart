@@ -1,3 +1,4 @@
+import 'package:clique_king_model/src/models/user.dart';
 import 'package:meta/meta.dart';
 
 @immutable

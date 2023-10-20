@@ -1,7 +1,5 @@
 import 'package:meta/meta.dart';
-
-typedef UserId = String;
-typedef ParticipantScore = int;
+import 'package:uuid/uuid.dart';
 
 @immutable
 class Clique {

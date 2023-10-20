@@ -1,10 +1,7 @@
 import 'package:firedart/firedart.dart';
 import 'package:meta/meta.dart';
 import 'package:fpdart/fpdart.dart';
-import '/src/models/user.dart';
-import '/src/repositories/repository_error.dart';
-
-typedef UserId = String;
+import 'package:clique_king_model/clique_king_model.dart';
 
 @immutable
 class UserRepository {

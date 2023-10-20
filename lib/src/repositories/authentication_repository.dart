@@ -2,8 +2,8 @@ import 'package:firedart/firedart.dart';
 import 'package:firedart/auth/user_gateway.dart' as auth;
 import 'package:meta/meta.dart';
 import 'package:fpdart/fpdart.dart';
-import '/src/models/user.dart';
-import '/src/repositories/repository_error.dart';
+import 'package:clique_king_model/clique_king_model.dart';
+
 
 @immutable
 class AuthenticationRepository {
