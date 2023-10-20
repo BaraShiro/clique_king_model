@@ -1,34 +1,52 @@
 import 'package:firedart/firedart.dart';
 import 'package:meta/meta.dart';
-import 'package:clique_king_model/src/models/user.dart';
+import 'package:fpdart/fpdart.dart';
+import '/src/models/user.dart';
+import '/src/repositories/repository_error.dart';
 
 typedef UserId = String;
 
 @immutable
 class UserRepository {
-  final Firestore store; // pass it in so it can be mocked.
+  final Firestore store;
 
   UserRepository({required this.store});
 
-  void createUser({required User user}) async {
-    // TODO: error handling
-    await store.collection("users").document(user.id).create(user.toMap());
+  Future<Option<RepositoryError>> createUser({required User user}) async {
+    try {
+      await store.collection("users").document(user.id).create(user.toMap());
+    } catch (e) {
+      return Option<RepositoryError>.of(RepositoryError(errorObject: e));
+    }
+    return Option<RepositoryError>.none();
   }
 
-  Future<User> readUser({ required UserId id}) async {
-    // TODO: error handling
-    Document document = await store.collection("users").document(id).get();
-    return User.fromMap(document.map);
+  Future<Either<RepositoryError, User>> readUser({ required UserId id}) async {
+    Document document;
+    try {
+      document = await store.collection("users").document(id).get();
+    } catch (e) {
+      return Either.left(RepositoryError(errorObject: e));
+    }
+    return Either.right(User.fromMap(document.map));
   }
-  void updateUser({required User user, required String newName}) async {
-    // TODO: error handling
+  Future<Option<RepositoryError>> updateUser({required User user, required String newName}) async {
     User updatedUser = user.updateName(newName);
-    await store.collection("users").document(user.id).update(updatedUser.toMap());
+    try {
+      await store.collection("users").document(user.id).update(updatedUser.toMap());
+    } catch (e) {
+      return Option<RepositoryError>.of(RepositoryError(errorObject: e));
+    }
+    return Option<RepositoryError>.none();
   }
 
-  void deleteUSer({required UserId id}) async {
-    // TODO: error handling
-    await store.collection("users").document(id).delete();
+  Future<Option<RepositoryError>> deleteUSer({required UserId id}) async {
+    try {
+      await store.collection("users").document(id).delete();
+    } catch (e) {
+      return Option<RepositoryError>.of(RepositoryError(errorObject: e));
+    }
+    return Option<RepositoryError>.none();
   }
 
 }
