@@ -1,66 +1,57 @@
 import 'package:firedart/firedart.dart';
-import 'package:firedart/auth/user_gateway.dart' as user_gateway;
+import 'package:firedart/auth/user_gateway.dart' as auth;
 import 'package:meta/meta.dart';
 import 'package:fpdart/fpdart.dart';
-import '../models/user.dart';
+import '/src/models/user.dart';
+import '/src/repositories/repository_error.dart';
 
 @immutable
 class AuthenticationRepository {
-  final FirebaseAuth auth; // pass it in so it can be mocked.
+  final FirebaseAuth authentication;
 
-  AuthenticationRepository({required this.auth});
+  AuthenticationRepository({required this.authentication});
 
-  Future<Option<User>> registerUser({required String email, required String password, required String userName}) async {
-    final user_gateway.User user;
+  Future<Either<RepositoryError, User>> registerUser({required String email, required String password, required String userName}) async {
+    final auth.User authUser;
     try {
-      await auth.signUp(email, password);
+      await authentication.signUp(email, password);
+      await authentication.updateProfile(displayName: userName);
+      authUser = await authentication.getUser();
     } catch(e) {
-      return Option<User>.none();
+      return Either.left(RepositoryError(errorObject: e));
     }
 
-    try {
-      await auth.updateProfile(displayName: userName);
-    } catch(e) {
-      return Option<User>.none();
-    }
-
-    try {
-      user = await auth.getUser();
-    } catch(e) {
-      return Option<User>.none();
-    }
-
-    return Option<User>.of(
-        User(
-          id: user.id,
-          name: user.displayName != null ? user.displayName! : "",
-          email: user.email != null ? user.email! : "",
-        )
-    );
+    return Either.right(User.fromAuthUser(authUser));
   }
 
-  Future<Option<User>> loginUser({required String email, required String password}) async {
-    user_gateway.User user;
+  Future<Either<RepositoryError, User>> loginUser({required String email, required String password}) async {
+    auth.User authUser;
     try {
-      user = await auth.signIn(email, password);
+      authUser = await authentication.signIn(email, password);
     } catch(e) {
-      return Option<User>.none();
+      return Either.left(RepositoryError(errorObject: e));
     }
 
-    return Option<User>.of(
-        User(
-          id: user.id,
-          name: user.displayName != null ? user.displayName! : "",
-          email: user.email != null ? user.email! : "",
-        )
-    );
+    return Either.right(User.fromAuthUser(authUser));
   }
 
-  void logoutUser() {
-    auth.signOut();
+  Option<RepositoryError> logoutUser() {
+    try {
+      authentication.signOut();
+    } catch(e) {
+      return Option.of(RepositoryError(errorObject: e));
+    }
+
+    return Option.none();
   }
 
-  Future<void> deleteUser() async {
-    await auth.deleteAccount();
+  Future<Option<RepositoryError>> deleteUser() async {
+    try {
+      await authentication.deleteAccount();
+    } catch(e) {
+      return Option.of(RepositoryError(errorObject: e));
+    }
+
+    return Option.none();
   }
 }
