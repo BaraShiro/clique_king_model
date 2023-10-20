@@ -1,5 +1,8 @@
 import 'package:firedart/firedart.dart';
 import 'package:meta/meta.dart';
+import 'package:clique_king_model/src/models/user.dart';
+
+typedef UserId = String;
 
 @immutable
 class UserRepository {
@@ -7,7 +10,25 @@ class UserRepository {
 
   UserRepository({required this.store});
 
-  // TODO: Create methods for managing users stored in Firebase Firestore.
-  // With Firestore, you have the option to return data once, or return a stream which emits
-  // data anytime data in the query changes.
+  void createUser({required User user}) async {
+    // TODO: error handling
+    await store.collection("users").document(user.id).create(user.toMap());
+  }
+
+  Future<User> readUser({ required UserId id}) async {
+    // TODO: error handling
+    Document document = await store.collection("users").document(id).get();
+    return User.fromMap(document.map);
+  }
+  void updateUser({required User user, required String newName}) async {
+    // TODO: error handling
+    User updatedUser = user.updateName(newName);
+    await store.collection("users").document(user.id).update(updatedUser.toMap());
+  }
+
+  void deleteUSer({required UserId id}) async {
+    // TODO: error handling
+    await store.collection("users").document(id).delete();
+  }
+
 }
