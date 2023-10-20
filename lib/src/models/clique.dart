@@ -3,15 +3,18 @@ import 'package:uuid/uuid.dart';
 
 @immutable
 class Clique {
-  final String id; // TODO: generate with uuid?
-  final String name; // creator selects name of clique
+  final String id;
+  final String name;
 
+  Clique({required this.name})
+      : id = Uuid().v4();
 
-  // TODO: Reflect over participantScores
-  // The user with the highest score is the Clique King
+  Clique.fromMap(Map<String, dynamic> map)
+      : id = map['id'],
+        name = map['name'];
 
-  Clique({
-    required this.id,
-    required this.name,
-  });
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'name': name,
+  };
 }
