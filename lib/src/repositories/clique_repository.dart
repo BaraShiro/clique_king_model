@@ -14,7 +14,10 @@ class CliqueRepository {
     Clique clique = Clique(name: name);
     Document document;
     try {
-      document = await store.collection(cliqueCollection).document(clique.id).create(clique.toMap());
+      document = await store
+          .collection(cliqueCollection)
+          .document(clique.id)
+          .create(clique.toMap());
     } catch (e) {
       return Either.left(RepositoryError(errorObject: e));
     }
@@ -41,7 +44,10 @@ class CliqueRepository {
   Either<RepositoryError, Stream<List<Score>>> readScoresFromClique({required CliqueId cliqueId}) {
     Stream<List<Document>> scoreDocumentStream;
     try {
-      scoreDocumentStream = store.collection(cliqueCollection).document(cliqueId).collection(participantCollection).stream;
+      scoreDocumentStream = store
+          .collection(cliqueCollection)
+          .document(cliqueId)
+          .collection(participantCollection).stream;
     } catch (e) {
       return Either.left(RepositoryError(errorObject: e));
     }
@@ -58,7 +64,12 @@ class CliqueRepository {
   Future<Option<RepositoryError>> addUser({required CliqueId cliqueId, required User user}) async {
     Score score = Score.fromUser(user);
     try {
-      await store.collection(cliqueCollection).document(cliqueId).collection(participantCollection).document(score.userId).create(score.toMap());
+      await store
+          .collection(cliqueCollection)
+          .document(cliqueId)
+          .collection(participantCollection)
+          .document(score.userId)
+          .create(score.toMap());
     } catch (e) {
       return Option.of(RepositoryError(errorObject: e));
     }
