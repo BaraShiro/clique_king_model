@@ -21,26 +21,38 @@ class CliqueRepository {
     return Either.right(Clique.fromMap(document.map));
   }
 
-  Stream<List<Clique>> readAllCliques() async* {
-    Stream<List<Document>> cliquesStream = store.collection("cliques").stream;
-
-    await for (List<Document> cliquesEvent in cliquesStream) {
-      List<Clique> allCliques = cliquesEvent.map(
-              (cliqueDocument) => Clique.fromMap(cliqueDocument.map)
-      ).toList();
-      yield allCliques;
+  Either<RepositoryError, Stream<List<Clique>>> readAllCliques() {
+    Stream<List<Document>> cliqueDocumentStream;
+    try {
+      cliqueDocumentStream = store.collection("cliques").stream;
+    } catch (e) {
+      return Either.left(RepositoryError(errorObject: e));
     }
+
+    Stream<List<Clique>> cliqueStream = cliqueDocumentStream.map(
+            (cliqueDocuments) => cliqueDocuments.map(
+                (cliqueDocument) => Clique.fromMap(cliqueDocument.map)
+        ).toList()
+    );
+
+    return Either.right(cliqueStream);
   }
 
-  Stream<List<Score>> readScoresFromClique({required CliqueId cliqueId}) async* {
-    Stream<List<Document>> scoresStream = store.collection(cliqueCollection).document(cliqueId).collection(participantCollection).stream;
-
-    await for (List<Document> scoresEvent in scoresStream) {
-      List<Score> allScores = scoresEvent.map(
-              (scoreDocument) => Score.fromMap(scoreDocument.map)
-      ).toList();
-      yield allScores;
+  Either<RepositoryError, Stream<List<Score>>> readScoresFromClique({required CliqueId cliqueId}) {
+    Stream<List<Document>> scoreDocumentStream;
+    try {
+      scoreDocumentStream = store.collection(cliqueCollection).document(cliqueId).collection(participantCollection).stream;
+    } catch (e) {
+      return Either.left(RepositoryError(errorObject: e));
     }
+
+    Stream<List<Score>> scoreStream = scoreDocumentStream.map(
+            (scoreDocuments) => scoreDocuments.map(
+                (scoreDocument) => Score.fromMap(scoreDocument.map)
+        ).toList()
+    );
+
+    return Either.right(scoreStream);
   }
 
   Future<Option<RepositoryError>> addUser({required CliqueId cliqueId, required User user}) async {
