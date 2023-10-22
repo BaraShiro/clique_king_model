@@ -18,3 +18,7 @@ export 'src/bloc/user/user_bloc.dart';
 
 typedef UserId = String;
 typedef CliqueId = String;
+
+const String userCollection = "users";
+const String cliqueCollection = "cliques";
+const String participantCollection = "participants";
