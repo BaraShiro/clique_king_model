@@ -1,5 +1,4 @@
 import 'package:clique_king_model/clique_king_model.dart';
-import 'package:clique_king_model/src/models/user.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:test/test.dart';
 import 'package:bloc_test/bloc_test.dart';
@@ -79,24 +78,12 @@ void main() async {
     final String validUserName = "ValidUser";
     final String invalidUserName = "InvalidUser";
 
-
     final User validUser = User(id: validId, name: validUserName, email: validEmail);
-
-    setUpAll(() {
-
-    });
-
-    tearDownAll(() {
-
-    });
+    final RepositoryError repositoryError = RepositoryError(errorObject: Exception("Repository Error"));
 
     setUp(() {
       reset(authenticationRepository);
       reset(userRepository);
-    });
-
-    tearDown(() {
-
     });
 
     blocTest(
@@ -123,7 +110,7 @@ void main() async {
       setUp: () {
         when(
             () => authenticationRepository.registerUser(email: validEmail, password: validPassword, userName: validUserName),
-        ).thenAnswer((_) => Future<Option<User>>.value(Option<User>.of(validUser)));
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
@@ -138,7 +125,7 @@ void main() async {
       setUp: () {
         when(
               () => authenticationRepository.registerUser(email: invalidEmail, password: invalidPassword, userName: invalidUserName),
-        ).thenAnswer((_) => Future<Option<User>>.value(Option<User>.none()));
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(repositoryError)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
@@ -153,7 +140,7 @@ void main() async {
       setUp: () {
         when(
               () => authenticationRepository.loginUser(email: validEmail, password: validPassword),
-        ).thenAnswer((_) => Future<Option<User>>.value(Option<User>.of(validUser)));
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
@@ -168,7 +155,7 @@ void main() async {
       setUp: () {
         when(
               () => authenticationRepository.loginUser(email: invalidEmail, password: invalidPassword),
-        ).thenAnswer((_) => Future<Option<User>>.value(Option<User>.none()));
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(repositoryError)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
@@ -183,7 +170,7 @@ void main() async {
       setUp: () {
         when(
               () => authenticationRepository.logoutUser(),
-        ).thenAnswer((_) => ());
+        ).thenAnswer((_) => Option<RepositoryError>.none());
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
@@ -198,7 +185,7 @@ void main() async {
       setUp: () {
         when(
               () => authenticationRepository.deleteUser(),
-        ).thenAnswer((_) => Future<void>.value());
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.none()));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
