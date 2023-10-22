@@ -77,12 +77,32 @@ class CliqueRepository {
     return Option.none();
   }
 
-  void removeUser({required CliqueId cliqueId, required UserId userId}) async {
-    throw UnimplementedError();
+  Future<Option<RepositoryError>> removeUser({required CliqueId cliqueId, required UserId userId}) async {
+    try {
+      await store
+          .collection(cliqueCollection)
+          .document(cliqueId)
+          .collection(participantCollection)
+          .document(userId)
+          .delete();
+    } catch (e) {
+      return Option.of(RepositoryError(errorObject: e));
+    }
+
+    return Option.none();
   }
 
-  void deleteClique({required CliqueId cliqueId}) async {
-    throw UnimplementedError();
+  Future<Option<RepositoryError>> deleteClique({required CliqueId cliqueId}) async {
+    try {
+      await store
+          .collection(cliqueCollection)
+          .document(cliqueId)
+          .delete();
+    } catch (e) {
+      return Option.of(RepositoryError(errorObject: e));
+    }
+
+    return Option.none();
   }
 
 }
