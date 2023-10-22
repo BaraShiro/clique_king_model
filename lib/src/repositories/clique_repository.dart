@@ -12,16 +12,16 @@ class CliqueRepository {
 
   Future<Either<RepositoryError, Clique>> createClique({required String name}) async {
     Clique clique = Clique(name: name);
-    Document document;
+    Document cliqueDocument;
     try {
-      document = await store
+      cliqueDocument = await store
           .collection(cliqueCollection)
           .document(clique.id)
           .create(clique.toMap());
     } catch (e) {
       return Either.left(RepositoryError(errorObject: e));
     }
-    return Either.right(Clique.fromMap(document.map));
+    return Either.right(Clique.fromMap(cliqueDocument.map));
   }
 
   Either<RepositoryError, Stream<List<Clique>>> readAllCliques() {
