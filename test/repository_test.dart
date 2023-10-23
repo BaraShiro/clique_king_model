@@ -99,9 +99,8 @@ void main() {
           password: invalidPassword,
           userName: invalidUserName,
       );
-      RepositoryError error = result.getLeft().getOrElse(() => throw Exception("Not a RepositoryError"));
 
-      expect(error, isA<RepositoryError>());
+      expect(result.isLeft(), isTrue);
     });
 
     test("loginUser(), called with valid data, returns a valid User", () async {
@@ -121,23 +120,24 @@ void main() {
         email: invalidEmail,
         password: invalidPassword,
       );
-      RepositoryError error = result.getLeft().getOrElse(() => throw Exception("Not a RepositoryError"));
 
-      expect(error, isA<RepositoryError>());
+      expect(result.isLeft(), isTrue);
     });
 
     test("logoutUser(), called, FirebaseAuth.signOut() is called", () {
 
-      authenticationRepository.logoutUser();
+      Option<RepositoryError> result = authenticationRepository.logoutUser();
 
       verify(() => mockFirebaseAuth.signOut());
+      expect(result.isNone(), isTrue);
     });
 
     test("deleteUser(), called, FirebaseAuth.deleteAccount() is called", () async {
 
-      await authenticationRepository.deleteUser();
+      Option<RepositoryError> result = await authenticationRepository.deleteUser();
 
       verify(() => mockFirebaseAuth.deleteAccount());
+      expect(result.isNone(), isTrue);
     });
 
   });
