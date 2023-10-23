@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:firedart/auth/user_gateway.dart' as auth;
 
 @immutable
-final class User extends Equatable{
+final class User extends Equatable {
   final String id;
   final String name;
   final String email;

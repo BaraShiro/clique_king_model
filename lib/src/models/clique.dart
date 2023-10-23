@@ -1,8 +1,9 @@
+import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
 import 'package:uuid/uuid.dart';
 
 @immutable
-class Clique {
+class Clique extends Equatable {
   final String id;
   final String name;
 
@@ -17,4 +18,7 @@ class Clique {
     'id': id,
     'name': name,
   };
+
+  @override
+  List<Object?> get props => [id, name];
 }

@@ -1,8 +1,9 @@
 import 'package:clique_king_model/src/models/user.dart';
+import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
 
 @immutable
-class Score {
+class Score extends Equatable {
   final String userId;
   final String userName;
   final int score;
@@ -28,4 +29,7 @@ class Score {
     'userName': userName,
     'score': score,
   };
+
+  @override
+  List<Object?> get props => [userId, userName, score];
 }
