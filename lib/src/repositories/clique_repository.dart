@@ -27,7 +27,7 @@ class CliqueRepository {
   Either<RepositoryError, Stream<List<Clique>>> readAllCliques() {
     Stream<List<Document>> cliqueDocumentStream;
     try {
-      cliqueDocumentStream = store.collection("cliques").stream;
+      cliqueDocumentStream = store.collection(cliqueCollection).stream;
     } catch (e) {
       return Either.left(RepositoryError(errorObject: e));
     }
