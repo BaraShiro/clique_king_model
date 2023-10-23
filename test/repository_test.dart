@@ -7,6 +7,10 @@ import 'package:mocktail/mocktail.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 class MockFirestore extends Mock implements Firestore {}
+class MockDocument extends Mock implements Document {}
+class MockStream<T> extends Mock implements Stream<T> {}
+class MockDocumentReference extends Mock implements DocumentReference {}
+class MockCollectionReference extends Mock implements CollectionReference {}
 
 void main() {
 
@@ -159,44 +163,147 @@ void main() {
   // });
 
   group("Clique Repository tests", () {
-    // final MockFirebaseAuth mockFirebaseAuth = MockFirebaseAuth();
     final MockFirestore mockFirestore = MockFirestore();
-    // final AuthenticationRepository authenticationRepository = AuthenticationRepository(auth: mockFirebaseAuth);
     final CliqueRepository cliqueRepository = CliqueRepository(store: mockFirestore);
+    final MockDocument mockCliqueDocument = MockDocument();
+    final MockDocument mockScoreDocument = MockDocument();
+    final MockStream<List<Document>> mockCliqueStream = MockStream<List<Document>>();
+    final MockStream<List<Document>> mockScoreStream = MockStream<List<Document>>();
+    final MockDocumentReference mockCliqueDocumentReference = MockDocumentReference();
+    final MockDocumentReference mockScoreDocumentReference = MockDocumentReference();
+    final MockCollectionReference mockCliqueCollectionReference = MockCollectionReference();
+    final MockCollectionReference mockScoreCollectionReference = MockCollectionReference();
+
+    final String validId = "valid_id";
+    final String validEmail = "valid@email.com";
+    final String validUserName = "ValidUser";
+
+    final User validUser = User(id: validId, name: validUserName, email: validEmail);
+
+    final Score validScore = Score(userId: validId, userName: validUserName, score: 0);
+    final Map<String, dynamic> validScoreMap = validScore.toMap();
 
     final String validCliqueName = "validCliqueName";
-
     final Clique validClique = Clique(name: validCliqueName);
+    final CliqueId validCliqueId = validClique.id;
+    final Map<String, dynamic> validCliqueMap = validClique.toMap();
 
-    // void createClique(String name)
-    test("createClique(), called with valid data, Firestore.collection().add() is called", () {
-      cliqueRepository.createClique(name: validCliqueName);
-      verify(() => mockFirestore.collection(validCliqueName).add(validClique.toMap()));
+    Stream<List<Document>> cliqueDocumentStream() async* {
+      yield [mockCliqueDocument];
+    }
+
+    Stream<List<Document>> scoreDocumentStream() async* {
+      yield [mockScoreDocument];
+    }
+
+    setUp(() {
+      reset(mockFirestore);
+      reset(mockCliqueCollectionReference);
+      reset(mockScoreCollectionReference);
+      reset(mockCliqueDocument);
+      reset(mockScoreDocument);
+      reset(mockCliqueStream);
+      reset(mockScoreStream);
+
+      when(
+        () => mockFirestore.collection(cliqueCollection)
+      ).thenReturn(mockCliqueCollectionReference);
+
+      when(
+        () => mockCliqueCollectionReference.document(any())
+      ).thenReturn(mockCliqueDocumentReference);
+
+      when(
+        () => mockCliqueDocumentReference.collection(any())
+      ).thenReturn(mockScoreCollectionReference);
+
+      when(
+        () => mockCliqueDocumentReference.delete()
+      ).thenAnswer((_) => Future<void>.value());
+
+      when(
+        () => mockCliqueDocumentReference.create(any())
+      ).thenAnswer((_) => Future<Document>.value(mockCliqueDocument));
+
+      when(
+        () => mockScoreCollectionReference.document(validId)
+      ).thenReturn(mockScoreDocumentReference);
+
+      when(
+        () => mockScoreDocumentReference.create(any())
+      ).thenAnswer((_) => Future<Document>.value(mockScoreDocument));
+
+      when(
+        () => mockScoreDocumentReference.delete()
+      ).thenAnswer((_) => Future<void>.value());
+
+      when(
+        () => mockCliqueCollectionReference.stream
+      ).thenAnswer((_) => cliqueDocumentStream());
+
+      when(
+          () => mockScoreCollectionReference.stream
+      ).thenAnswer((_) => scoreDocumentStream());
+
+      when(
+        () => mockCliqueDocument.map
+      ).thenReturn(validCliqueMap);
+
+      when(
+        () => mockScoreDocument.map
+      ).thenReturn(validScoreMap);
+
     });
 
-    //   StreamSubscription<List<Document>> readAllCliques({required List<Clique> Function(List<Document> event) handler})
-    test("readAllCliques(), called, returns a stream subscription", () {
+    test("createClique(), called with valid data, document.create() is called and returns a valid Clique", () async {
+      Either<RepositoryError, Clique> result = await cliqueRepository.createClique(name: validCliqueName);
+      Clique clique = result.getOrElse((l) => throw Exception("Not a valid Clique! Error: ${l.errorObject}"));
 
+      verify(() => mockCliqueDocumentReference.create(any()));
+      expect(clique, validClique);
     });
 
-    //  List<Document> readScoresFromClique({ required String cliqueId, required List<Score> Function(List<Document> event) handler})
-    test("readScoresFromClique(), called with valid data, returns ", () {
+    test("readAllCliques(), called, gets collection.stream and returns a Stream<List<Clique>>", () async {
+      Either<RepositoryError, Stream<List<Clique>>> result = cliqueRepository.readAllCliques();
 
+      Stream<List<Clique>> cliqueStream = result.getOrElse((l) => throw Exception("Not a valid Clique Stream! Error: ${l.errorObject}"));
+      List<Clique> cliques = await cliqueStream.first;
+
+      verify(() => mockCliqueCollectionReference.stream);
+      expect(result.isRight(), isTrue);
+      expect(cliques, [validClique]);
     });
 
-    // void addUser(String cliqueId, String userId, String userName)
-    test("addUser(), called with valid data", () {
+    test("readScoresFromClique(), called with valid data, returns a Stream<List<Score>>", () async {
+      Either<RepositoryError, Stream<List<Score>>> result = cliqueRepository.readScoresFromClique(cliqueId: validCliqueId);
 
+      Stream<List<Score>> scoreStream = result.getOrElse((l) => throw Exception("Not a valid Clique Stream! Error: ${l.errorObject}"));
+      List<Score> scores = await scoreStream.first;
+
+      verify(() => mockScoreCollectionReference.stream);
+      expect(result.isRight(), isTrue);
+      expect(scores, [validScore]);
     });
 
-    // void removeUser(String cliqueId, String userId)
-    test("", () {
+    test("addUser(), called with valid data, document.create() is called and returns no RepositoryError", () async {
+      Option<RepositoryError> result = await cliqueRepository.addUser(cliqueId: validCliqueId, user: validUser);
 
+      verify(() => mockScoreDocumentReference.create(any()));
+      expect(result.isNone(), isTrue);
     });
 
-    // void deleteClique(String cliqueId)
-    test("", () {
+    test("removeUser(), called with valid data, document.delete() is called and returns no RepositoryError", () async {
+      final Option<RepositoryError> result = await cliqueRepository.removeUser(cliqueId: validCliqueId, userId: validId);
 
+      verify(() => mockScoreDocumentReference.delete());
+      expect(result.isNone(), isTrue);
+    });
+
+    test("deleteClique(), called with valid data, collection.delete() is called and returns no RepositoryError", () async {
+      final Option<RepositoryError> result = await cliqueRepository.deleteClique(cliqueId: validCliqueId);
+
+      verify(() => mockCliqueDocumentReference.delete());
+      expect(result.isNone(), isTrue);
     });
 
   });
