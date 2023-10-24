@@ -146,21 +146,114 @@ void main() {
 
   });
 
-  // group("User Repository tests", () {
-  //
-  //   test("", () {
-  //
-  //   });
-  //
-  //   test("", () {
-  //
-  //   });
-  //
-  //   test("", () {
-  //
-  //   });
-  //
-  // });
+  group("User Repository tests", () {
+    final MockFirestore mockFirestore = MockFirestore();
+    final UserRepository userRepository = UserRepository(store: mockFirestore);
+    final MockDocument mockUserDocument = MockDocument();
+    final MockDocument mockUpdatedUserDocument = MockDocument();
+    final MockCollectionReference mockUserCollectionReference = MockCollectionReference();
+    final MockDocumentReference mockUserDocumentReference = MockDocumentReference();
+    final MockDocumentReference mockToBeUpdatedUserDocumentReference = MockDocumentReference();
+
+
+    final String validId = "valid_id";
+    final String validEmail = "valid@email.com";
+    final String validUserName = "ValidUser";
+
+    final User validUser = User(id: validId, name: validUserName, email: validEmail);
+    final Map<String, dynamic> validUserMap = validUser.toMap();
+
+    final String validToBeUpdatedId = "valid_update_id";
+
+    final User validToBeUpdatedUser = User(id: validToBeUpdatedId, name: validUserName, email: validEmail);
+
+    final String validUpdatedUserName = "ValidUserUpdated";
+
+    final User validUpdatedUser = User(id: validToBeUpdatedId, name: validUpdatedUserName, email: validEmail);
+    final Map<String, dynamic> validUpdatedUserMap = validUpdatedUser.toMap();
+
+    setUp(() {
+      reset(mockFirestore);
+      reset(mockUserDocument);
+      reset(mockUpdatedUserDocument);
+      reset(mockUserCollectionReference);
+      reset(mockUserDocumentReference);
+      reset(mockToBeUpdatedUserDocumentReference);
+
+      when(
+        () => mockFirestore.collection(userCollection)
+      ).thenReturn(mockUserCollectionReference);
+
+      when(
+        () => mockUserCollectionReference.document(validId)
+      ).thenReturn(mockUserDocumentReference);
+
+      when(
+        () => mockUserCollectionReference.document(validToBeUpdatedId)
+      ).thenReturn(mockToBeUpdatedUserDocumentReference);
+
+      when(
+        () => mockUserDocumentReference.create(validUserMap)
+      ).thenAnswer((_) => Future<Document>.value(mockUserDocument));
+
+      when(
+        () => mockUserDocumentReference.get()
+      ).thenAnswer((_) => Future<Document>.value(mockUserDocument));
+
+      when(
+        () => mockUserDocumentReference.delete()
+      ).thenAnswer((_) => Future<void>.value());
+
+      when(
+        () => mockToBeUpdatedUserDocumentReference.update(validUpdatedUserMap)
+      ).thenAnswer((_) => Future<void>.value());
+
+      when(
+        () => mockToBeUpdatedUserDocumentReference.get()
+      ).thenAnswer((_) => Future<Document>.value(mockUpdatedUserDocument));
+      
+      when(
+        () => mockUserDocument.map
+      ).thenReturn(validUserMap);
+
+      when(
+        () => mockUpdatedUserDocument.map
+      ).thenReturn(validUpdatedUserMap);
+
+    });
+
+    test("createUser(), called with valid data, returns a valid User", () async {
+      Either<RepositoryError, User> result = await userRepository.createUser(user: validUser);
+      User user = result.getOrElse((l) => throw Exception(l.errorObject));
+
+      verify(() => mockUserDocumentReference.create(any()));
+      expect(user, equals(validUser));
+    });
+
+    test("readUser(), called with valid data, returns a valid User", () async {
+      Either<RepositoryError, User> result = await userRepository.readUser(id: validId);
+      User user = result.getOrElse((l) => throw Exception(l.errorObject));
+
+      verify(() => mockUserDocumentReference.get());
+      expect(user, equals(validUser));
+    });
+
+    test("updateUser(), called with valid data, returns a valid User", () async {
+      Either<RepositoryError, User> result = await userRepository.updateUser(user: validToBeUpdatedUser, newName: validUpdatedUserName);
+      User user = result.getOrElse((l) => throw Exception(l.errorObject));
+
+      verify(() => mockToBeUpdatedUserDocumentReference.update(any()));
+      expect(user, equals(validUpdatedUser));
+    });
+
+    test("deleteUser(), called with valid data, returns no RepositoryError", () async {
+      Option<RepositoryError> result = await userRepository.deleteUSer(id: validId);
+
+      verify(() => mockUserDocumentReference.delete());
+      expect(result.isNone(), isTrue);
+    });
+
+  });
 
   group("Clique Repository tests", () {
     final MockFirestore mockFirestore = MockFirestore();
