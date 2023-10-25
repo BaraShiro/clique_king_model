@@ -131,7 +131,7 @@ void main() async {
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
       act: (bloc) => bloc.add(UserRegister(email: invalidEmail, password: invalidPassword, name: invalidUserName)),
-      expect: () => [UserRegisterInProgress(), UserRegisterFailure()],
+      expect: () => [UserRegisterInProgress(), UserRegisterFailure(error: repositoryError)],
       verify: (bloc) => bloc.state is UserRegisterFailure,
     );
 
@@ -161,7 +161,7 @@ void main() async {
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
       act: (bloc) => bloc.add(UserLogin(email: invalidEmail, password: invalidPassword)),
-      expect: () => [UserLoginInProgress(), UserLoginFailure()],
+      expect: () => [UserLoginInProgress(), UserLoginFailure(error: repositoryError)],
       verify: (bloc) => bloc.state is UserLoginFailure,
     );
 
@@ -176,8 +176,23 @@ void main() async {
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
       act: (bloc) => bloc.add(UserLogout()),
-      expect: () => [UserLogoutSuccess()],
+      expect: () => [UserLogoutInProgress(), UserLogoutSuccess()],
       verify: (bloc) => bloc.state is UserLogoutSuccess,
+    );
+
+    blocTest(
+      'Emits UserLogoutFailure on UserLogout Event',
+      setUp: () {
+        when(
+              () => authenticationRepository.logoutUser(),
+        ).thenAnswer((_) => Option<RepositoryError>.of(repositoryError));
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserLogout()),
+      expect: () => [UserLogoutInProgress(), UserLogoutFailure(error: repositoryError)],
+      verify: (bloc) => bloc.state is UserLogoutFailure,
     );
 
     blocTest(
@@ -191,19 +206,24 @@ void main() async {
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
       act: (bloc) => bloc.add(UserDelete()),
-      expect: () => [UserDeleteSuccess()],
+      expect: () => [UserDeleteInProgress(), UserDeleteSuccess()],
       verify: (bloc) => bloc.state is UserDeleteSuccess,
     );
 
-    // blocTest(
-    //   'Emits UserDeleteFailure on UserDelete Event invalid data',
-    //   build: () => UserBloc(
-    //       authenticationRepository: authenticationRepository,
-    //       userRepository: userRepository),
-    //   act: (bloc) => {},
-    //   expect: () => {},
-    //   verify: (bloc) => {},
-    // );
+    blocTest(
+      'Emits UserDeleteFailure on UserDelete Event invalid data',
+      setUp: () {
+        when(
+              () => authenticationRepository.deleteUser(),
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.of(repositoryError)));
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserDelete()),
+      expect: () => [UserDeleteInProgress(), UserDeleteFailure(error: repositoryError)],
+      verify: (bloc) => bloc.state is UserDeleteFailure,
+    );
 
   });
 
