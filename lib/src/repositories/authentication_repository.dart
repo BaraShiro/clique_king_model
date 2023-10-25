@@ -58,7 +58,7 @@ class AuthenticationRepository {
     return Either.right(User.fromAuthUser(authUser));
   }
 
-  Option<RepositoryError> logoutUser() {
+  Future<Option<RepositoryError>> logoutUser() async {
     try {
       authentication.signOut();
     } catch(e) {

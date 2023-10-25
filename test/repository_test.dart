@@ -128,9 +128,9 @@ void main() {
       expect(result.isLeft(), isTrue);
     });
 
-    test("logoutUser(), called, FirebaseAuth.signOut() is called", () {
+    test("logoutUser(), called, FirebaseAuth.signOut() is called", () async {
 
-      Option<RepositoryError> result = authenticationRepository.logoutUser();
+      Option<RepositoryError> result = await authenticationRepository.logoutUser();
 
       verify(() => mockFirebaseAuth.signOut());
       expect(result.isNone(), isTrue);

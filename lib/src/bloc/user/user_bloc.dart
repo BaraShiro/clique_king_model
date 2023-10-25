@@ -137,21 +137,21 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
       (event, emit) async {
         switch (event) {
           case UserStarted():
-            _handleUserStartedEvent(event: event, emit: emit);
+            await _handleUserStartedEvent(event: event, emit: emit);
           case UserRegister():
-            _handleUserRegisterEvent(event: event, emit: emit);
+            await _handleUserRegisterEvent(event: event, emit: emit);
           case UserLogin():
-            _handleUserLoginEvent(event: event, emit: emit);
+            await _handleUserLoginEvent(event: event, emit: emit);
           case UserLogout():
-            _handleUserLogoutEvent(event: event, emit: emit);
+            await _handleUserLogoutEvent(event: event, emit: emit);
           case UserDelete():
-            _handleUserDeleteEvent(event: event, emit: emit);
+            await _handleUserDeleteEvent(event: event, emit: emit);
         }
       },
     );
   }
 
-  void _handleUserStartedEvent({required UserStarted event, required Emitter<UserState> emit}) async {
+  Future<void> _handleUserStartedEvent({required UserStarted event, required Emitter<UserState> emit}) async {
     emit(UserLoginInProgress());
     if(_authRepo.isUserLoggedIn) {
       Either<RepositoryError, User> result = await _authRepo.getLoggedInUser();
@@ -165,12 +165,12 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
     }
   }
 
-  void _handleUserRegisterEvent({required UserRegister event, required Emitter<UserState> emit}) async {
+  Future<void> _handleUserRegisterEvent({required UserRegister event, required Emitter<UserState> emit}) async {
     emit(UserRegisterInProgress());
     Either<RepositoryError, User> authResult = await _authRepo.registerUser(email: event.email, password: event.password, userName: event.name);
 
-    authResult.match(
-            (l) => emit(UserRegisterFailure(error: l)),
+    await authResult.match(
+            (l) async => emit(UserRegisterFailure(error: l)),
             (r) async {
               Either<RepositoryError, User> userResult = await _userRepo.createUser(user: r);
 
@@ -182,7 +182,7 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
     );
   }
 
-  void _handleUserLoginEvent({required UserLogin event, required Emitter<UserState> emit}) async {
+  Future<void> _handleUserLoginEvent({required UserLogin event, required Emitter<UserState> emit}) async {
     emit(UserLoginInProgress());
     Either<RepositoryError, User> result = await _authRepo.loginUser(email: event.email, password: event.password);
 
@@ -192,9 +192,9 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
     );
   }
 
-  void _handleUserLogoutEvent({required UserLogout event, required Emitter<UserState> emit}) {
+  Future<void> _handleUserLogoutEvent({required UserLogout event, required Emitter<UserState> emit}) async {
     emit(UserLogoutInProgress());
-    Option<RepositoryError> result = _authRepo.logoutUser();
+    Option<RepositoryError> result = await _authRepo.logoutUser();
 
     result.match(
             () => emit(UserLogoutSuccess()),
@@ -202,7 +202,7 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
     );
   }
 
-  void _handleUserDeleteEvent({required UserDelete event, required Emitter<UserState> emit}) async {
+  Future<void> _handleUserDeleteEvent({required UserDelete event, required Emitter<UserState> emit}) async {
     emit(UserDeleteInProgress());
     Option<RepositoryError> result = await _authRepo.deleteUser();
 

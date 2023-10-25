@@ -183,7 +183,7 @@ void main() async {
       setUp: () {
         when(
               () => authenticationRepository.logoutUser(),
-        ).thenAnswer((_) => Option<RepositoryError>.none());
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option<RepositoryError>.none()));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
@@ -198,7 +198,7 @@ void main() async {
       setUp: () {
         when(
               () => authenticationRepository.logoutUser(),
-        ).thenAnswer((_) => Option<RepositoryError>.of(failedToLogoutAccount));
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option<RepositoryError>.of(failedToLogoutAccount)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
