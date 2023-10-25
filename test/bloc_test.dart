@@ -79,7 +79,10 @@ void main() async {
     final String invalidUserName = "InvalidUser";
 
     final User validUser = User(id: validId, name: validUserName, email: validEmail);
-    final RepositoryError repositoryError = RepositoryError(errorObject: Exception("Repository Error"));
+    final FailedToRegisterAccount failedToRegisterAccount = FailedToRegisterAccount(errorObject: "Failed to register");
+    final WrongLoginCredentials wrongLoginCredentials = WrongLoginCredentials(errorObject: "Wrong email or password");
+    final FailedToLogoutAccount failedToLogoutAccount = FailedToLogoutAccount(errorObject: "Failed to logout");
+    final FailedToDeleteAccount failedToDeleteAccount = FailedToDeleteAccount(errorObject: "Failed to delete");
 
     setUp(() {
       reset(authenticationRepository);
@@ -118,6 +121,9 @@ void main() async {
         when(
             () => authenticationRepository.registerUser(email: validEmail, password: validPassword, userName: validUserName),
         ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
+        when(
+              () => userRepository.createUser(user: validUser),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
@@ -132,13 +138,13 @@ void main() async {
       setUp: () {
         when(
               () => authenticationRepository.registerUser(email: invalidEmail, password: invalidPassword, userName: invalidUserName),
-        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(repositoryError)));
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(failedToRegisterAccount)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
       act: (bloc) => bloc.add(UserRegister(email: invalidEmail, password: invalidPassword, name: invalidUserName)),
-      expect: () => [UserRegisterInProgress(), UserRegisterFailure(error: repositoryError)],
+      expect: () => [UserRegisterInProgress(), UserRegisterFailure(error: failedToRegisterAccount)],
       verify: (bloc) => bloc.state is UserRegisterFailure,
     );
 
@@ -162,13 +168,13 @@ void main() async {
       setUp: () {
         when(
               () => authenticationRepository.loginUser(email: invalidEmail, password: invalidPassword),
-        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(repositoryError)));
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(wrongLoginCredentials)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
       act: (bloc) => bloc.add(UserLogin(email: invalidEmail, password: invalidPassword)),
-      expect: () => [UserLoginInProgress(), UserLoginFailure(error: repositoryError)],
+      expect: () => [UserLoginInProgress(), UserLoginFailure(error: wrongLoginCredentials)],
       verify: (bloc) => bloc.state is UserLoginFailure,
     );
 
@@ -192,13 +198,13 @@ void main() async {
       setUp: () {
         when(
               () => authenticationRepository.logoutUser(),
-        ).thenAnswer((_) => Option<RepositoryError>.of(repositoryError));
+        ).thenAnswer((_) => Option<RepositoryError>.of(failedToLogoutAccount));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
       act: (bloc) => bloc.add(UserLogout()),
-      expect: () => [UserLogoutInProgress(), UserLogoutFailure(error: repositoryError)],
+      expect: () => [UserLogoutInProgress(), UserLogoutFailure(error: failedToLogoutAccount)],
       verify: (bloc) => bloc.state is UserLogoutFailure,
     );
 
@@ -222,13 +228,13 @@ void main() async {
       setUp: () {
         when(
               () => authenticationRepository.deleteUser(),
-        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.of(repositoryError)));
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.of(failedToDeleteAccount)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
       act: (bloc) => bloc.add(UserDelete()),
-      expect: () => [UserDeleteInProgress(), UserDeleteFailure(error: repositoryError)],
+      expect: () => [UserDeleteInProgress(), UserDeleteFailure(error: failedToDeleteAccount)],
       verify: (bloc) => bloc.state is UserDeleteFailure,
     );
 

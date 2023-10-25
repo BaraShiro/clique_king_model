@@ -12,19 +12,24 @@ class UserRepository {
   Future<Either<RepositoryError, User>> createUser({required User user}) async {
     Document document;
     try {
-      document = await store.collection(userCollection).document(user.id).create(user.toMap());
+      document = await store
+          .collection(userCollection)
+          .document(user.id)
+          .create(user.toMap());
     } catch (e) {
-      return Either.left(RepositoryError(errorObject: e));
+      return Either.left(FailedToCreateUser(errorObject: e));
     }
     return Either.right(User.fromMap(document.map));
   }
 
-  Future<Either<RepositoryError, User>> readUser({ required UserId id}) async {
+  Future<Either<RepositoryError, User>> readUser({required UserId id}) async {
     Document document;
     try {
-      document = await store.collection(userCollection).document(id).get();
+      document = await store
+          .collection(userCollection)
+          .document(id).get();
     } catch (e) {
-      return Either.left(RepositoryError(errorObject: e));
+      return Either.left(FailedToReadUser(errorObject: e));
     }
     return Either.right(User.fromMap(document.map));
   }
@@ -33,19 +38,30 @@ class UserRepository {
     User updatedUser = user.updateName(newName);
     Document document;
     try {
-      await store.collection(userCollection).document(user.id).update(updatedUser.toMap());
+      await store
+          .collection(userCollection)
+          .document(user.id)
+          .update(updatedUser.toMap());
+    } catch (e) {
+      return Either.left(FailedToUpdateUser(errorObject: e));
+    }
+    try {
       document = await store.collection(userCollection).document(user.id).get();
     } catch (e) {
-      return Either.left(RepositoryError(errorObject: e));
+      return Either.left(FailedToReadUser(errorObject: e));
     }
+
     return Either.right(User.fromMap(document.map));
   }
 
   Future<Option<RepositoryError>> deleteUSer({required UserId id}) async {
     try {
-      await store.collection(userCollection).document(id).delete();
+      await store
+          .collection(userCollection)
+          .document(id)
+          .delete();
     } catch (e) {
-      return Option.of(RepositoryError(errorObject: e));
+      return Option.of(FailedToDeleteUser(errorObject: e));
     }
     return Option.none();
   }

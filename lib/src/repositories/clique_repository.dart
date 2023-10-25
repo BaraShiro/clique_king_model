@@ -19,7 +19,7 @@ class CliqueRepository {
           .document(clique.id)
           .create(clique.toMap());
     } catch (e) {
-      return Either.left(RepositoryError(errorObject: e));
+      return Either.left(FailedToCreateClique(errorObject: e));
     }
     return Either.right(Clique.fromMap(cliqueDocument.map));
   }
@@ -27,9 +27,11 @@ class CliqueRepository {
   Either<RepositoryError, Stream<List<Clique>>> readAllCliques() {
     Stream<List<Document>> cliqueDocumentStream;
     try {
-      cliqueDocumentStream = store.collection(cliqueCollection).stream;
+      cliqueDocumentStream = store
+          .collection(cliqueCollection)
+          .stream;
     } catch (e) {
-      return Either.left(RepositoryError(errorObject: e));
+      return Either.left(FailedToStreamCliques(errorObject: e));
     }
 
     Stream<List<Clique>> cliqueStream = cliqueDocumentStream.map(
@@ -47,9 +49,10 @@ class CliqueRepository {
       scoreDocumentStream = store
           .collection(cliqueCollection)
           .document(cliqueId)
-          .collection(participantCollection).stream;
+          .collection(participantCollection)
+          .stream;
     } catch (e) {
-      return Either.left(RepositoryError(errorObject: e));
+      return Either.left(FailedToStreamScores(errorObject: e));
     }
 
     Stream<List<Score>> scoreStream = scoreDocumentStream.map(
@@ -71,7 +74,7 @@ class CliqueRepository {
           .document(score.userId)
           .create(score.toMap());
     } catch (e) {
-      return Option.of(RepositoryError(errorObject: e));
+      return Option.of(FailedToAddUserToClique(errorObject: e));
     }
 
     return Option.none();
@@ -86,7 +89,7 @@ class CliqueRepository {
           .document(userId)
           .delete();
     } catch (e) {
-      return Option.of(RepositoryError(errorObject: e));
+      return Option.of(FailedToRemoveUserFromClique(errorObject: e));
     }
 
     return Option.none();
@@ -99,7 +102,7 @@ class CliqueRepository {
           .document(cliqueId)
           .delete();
     } catch (e) {
-      return Option.of(RepositoryError(errorObject: e));
+      return Option.of(FailedToDeleteClique(errorObject: e));
     }
 
     return Option.none();

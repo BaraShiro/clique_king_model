@@ -17,10 +17,20 @@ class AuthenticationRepository {
     final auth.User authUser;
     try {
       await authentication.signUp(email, password);
+    } catch(e) {
+      return Either.left(FailedToRegisterAccount(errorObject: e));
+    }
+
+    try {
       await authentication.updateProfile(displayName: userName);
+    } catch(e) {
+      return Either.left(FailedToUpdateAccount(errorObject: e));
+    }
+
+    try {
       authUser = await authentication.getUser();
     } catch(e) {
-      return Either.left(RepositoryError(errorObject: e));
+      return Either.left(FailedToGetAccount(errorObject: e));
     }
 
     return Either.right(User.fromAuthUser(authUser));
@@ -31,7 +41,7 @@ class AuthenticationRepository {
     try {
       authUser = await authentication.getUser();
     } catch(e) {
-      return Either.left(RepositoryError(errorObject: e));
+      return Either.left(FailedToGetAccount(errorObject: e));
     }
 
     return Either.right(User.fromAuthUser(authUser));
@@ -42,7 +52,7 @@ class AuthenticationRepository {
     try {
       authUser = await authentication.signIn(email, password);
     } catch(e) {
-      return Either.left(RepositoryError(errorObject: e));
+      return Either.left(WrongLoginCredentials(errorObject: e));
     }
 
     return Either.right(User.fromAuthUser(authUser));
@@ -52,7 +62,7 @@ class AuthenticationRepository {
     try {
       authentication.signOut();
     } catch(e) {
-      return Option.of(RepositoryError(errorObject: e));
+      return Option.of(FailedToLogoutAccount(errorObject: e));
     }
 
     return Option.none();
@@ -62,7 +72,7 @@ class AuthenticationRepository {
     try {
       await authentication.deleteAccount();
     } catch(e) {
-      return Option.of(RepositoryError(errorObject: e));
+      return Option.of(FailedToDeleteAccount(errorObject: e));
     }
 
     return Option.none();

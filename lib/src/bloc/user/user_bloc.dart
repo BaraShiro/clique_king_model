@@ -160,7 +160,7 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
               (r) => emit(UserLoginSuccess(user: r))
       );
     } else {
-      RepositoryError notLoggedInError = RepositoryError(errorObject: "User is not logged in");
+      RepositoryError notLoggedInError = AccountNotLoggedIn(errorObject: "User is not logged in");
       emit(UserLoginFailure(error: notLoggedInError));
     }
   }
@@ -168,7 +168,6 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
   void _handleUserRegisterEvent({required UserRegister event, required Emitter<UserState> emit}) async {
     emit(UserRegisterInProgress());
     Either<RepositoryError, User> authResult = await _authRepo.registerUser(email: event.email, password: event.password, userName: event.name);
-
 
     authResult.match(
             (l) => emit(UserRegisterFailure(error: l)),
