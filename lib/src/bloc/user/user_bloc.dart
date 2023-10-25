@@ -3,6 +3,7 @@ import 'package:clique_king_model/clique_king_model.dart';
 import 'package:clique_king_model/src/models/user.dart';
 import 'package:meta/meta.dart';
 import 'package:equatable/equatable.dart';
+import 'package:fpdart/fpdart.dart';
 
 @immutable
 sealed class UserEvent {}
@@ -53,6 +54,10 @@ final class UserLoginSuccess extends UserState {
 }
 
 final class UserLoginFailure extends UserState {
+  final RepositoryError error;
+
+  UserLoginFailure({required this.error});
+
   @override
   List<Object?> get props => [];
 }
@@ -66,11 +71,21 @@ final class UserRegisterSuccess extends UserState {
   final User user;
 
   UserRegisterSuccess({required this.user});
+
   @override
   List<Object?> get props => [];
 }
 
 final class UserRegisterFailure extends UserState {
+  final RepositoryError error;
+
+  UserRegisterFailure({required this.error});
+
+  @override
+  List<Object?> get props => [];
+}
+
+final class UserLogoutInProgress extends UserState {
   @override
   List<Object?> get props => [];
 }
@@ -80,15 +95,33 @@ final class UserLogoutSuccess extends UserState {
   List<Object?> get props => [];
 }
 
+final class UserLogoutFailure extends UserState {
+  final RepositoryError error;
+
+  UserLogoutFailure({required this.error});
+
+  @override
+  List<Object?> get props => [];
+}
+
+final class UserDeleteInProgress extends UserState {
+  @override
+  List<Object?> get props => [];
+}
+
 final class UserDeleteSuccess extends UserState {
   @override
   List<Object?> get props => [];
 }
 
-// final class UserDeleteFailure extends UserState {
-//   @override
-//   List<Object?> get props => [];
-// }
+final class UserDeleteFailure extends UserState {
+  final RepositoryError error;
+
+  UserDeleteFailure({required this.error});
+
+  @override
+  List<Object?> get props => [];
+}
 
 final class UserBloc extends Bloc<UserEvent, UserState> {
   final UserRepository _userRepo; // passed in so it can be easily mocked
@@ -104,18 +137,62 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
       (event, emit) async {
         switch (event) {
           case UserStarted():
-            emit(UserLoginInProgress());
-          // TODO: Attempt to login using potentially stored local token.
+            _handleUserStartedEvent(event: event, emit: emit);
           case UserRegister():
-          // TODO: Handle this case.
+            _handleUserRegisterEvent(event: event, emit: emit);
           case UserLogin():
-          // TODO: Handle this case.
+            _handleUserLoginEvent(event: event, emit: emit);
           case UserLogout():
-          // TODO: Handle this case.
+            _handleUserLogoutEvent(event: event, emit: emit);
           case UserDelete():
-          // TODO: Handle this case.
+            _handleUserDeleteEvent(event: event, emit: emit);
         }
       },
+    );
+  }
+
+  void _handleUserStartedEvent({required UserStarted event, required Emitter<UserState> emit}) async {
+    emit(UserLoginInProgress());
+    // TODO: Attempt to login using potentially stored local token.
+  }
+
+  void _handleUserRegisterEvent({required UserRegister event, required Emitter<UserState> emit}) async {
+    emit(UserRegisterInProgress());
+    Either<RepositoryError, User> result = await _authRepo.registerUser(email: event.email, password: event.password, userName: event.name);
+
+    result.match(
+            (l) => emit(UserRegisterFailure(error: l)),
+            (r) => emit(UserRegisterSuccess(user: r))
+    );
+  }
+
+  void _handleUserLoginEvent({required UserLogin event, required Emitter<UserState> emit}) async {
+    emit(UserLoginInProgress());
+    Either<RepositoryError, User> result = await _authRepo.loginUser(email: event.email, password: event.password);
+
+    result.match(
+            (l) => emit(UserLoginFailure(error: l)),
+            (r) => emit(UserLoginSuccess(user: r))
+    );
+  }
+
+  void _handleUserLogoutEvent({required UserLogout event, required Emitter<UserState> emit}) {
+    emit(UserLogoutInProgress());
+    Option<RepositoryError> result = _authRepo.logoutUser();
+
+    result.match(
+            () => emit(UserLogoutSuccess()),
+            (t) => emit(UserLogoutFailure(error: t))
+    );
+  }
+
+  void _handleUserDeleteEvent({required UserDelete event, required Emitter<UserState> emit}) async {
+    emit(UserDeleteInProgress());
+    Option<RepositoryError> result = await _authRepo.deleteUser();
+
+    result.match(
+            () => emit(UserDeleteSuccess()),
+            (t) => emit(UserDeleteFailure(error: t))
     );
   }
 }
