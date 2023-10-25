@@ -1,6 +1,5 @@
 import 'package:bloc/bloc.dart';
 import 'package:clique_king_model/clique_king_model.dart';
-import 'package:clique_king_model/src/models/user.dart';
 import 'package:meta/meta.dart';
 import 'package:equatable/equatable.dart';
 import 'package:fpdart/fpdart.dart';

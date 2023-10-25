@@ -1,10 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:clique_king_model/clique_king_model.dart';
-import 'package:clique_king_model/src/models/clique.dart';
-import 'package:clique_king_model/src/models/user.dart';
-import 'package:clique_king_model/src/models/score.dart';
-import 'package:clique_king_model/src/repositories/clique_repository.dart';
 import 'package:meta/meta.dart';
+import 'package:fpdart/fpdart.dart';
 
 @immutable
 sealed class CliqueEvent {}
