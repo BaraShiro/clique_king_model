@@ -48,6 +48,7 @@ final class UserLoginSuccess extends UserState {
   final User user;
 
   UserLoginSuccess({required this.user});
+
   @override
   List<Object?> get props => [user];
 }
@@ -58,7 +59,7 @@ final class UserLoginFailure extends UserState {
   UserLoginFailure({required this.error});
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [error];
 }
 
 final class UserRegisterInProgress extends UserState {
@@ -72,7 +73,7 @@ final class UserRegisterSuccess extends UserState {
   UserRegisterSuccess({required this.user});
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [user];
 }
 
 final class UserRegisterFailure extends UserState {
@@ -81,7 +82,7 @@ final class UserRegisterFailure extends UserState {
   UserRegisterFailure({required this.error});
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [error];
 }
 
 final class UserLogoutInProgress extends UserState {
@@ -100,7 +101,7 @@ final class UserLogoutFailure extends UserState {
   UserLogoutFailure({required this.error});
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [error];
 }
 
 final class UserDeleteInProgress extends UserState {
@@ -119,7 +120,7 @@ final class UserDeleteFailure extends UserState {
   UserDeleteFailure({required this.error});
 
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [error];
 }
 
 final class UserBloc extends Bloc<UserEvent, UserState> {
