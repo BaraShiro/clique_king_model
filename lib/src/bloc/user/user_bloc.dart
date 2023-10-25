@@ -152,16 +152,33 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
 
   void _handleUserStartedEvent({required UserStarted event, required Emitter<UserState> emit}) async {
     emit(UserLoginInProgress());
-    // TODO: Attempt to login using potentially stored local token.
+    if(_authRepo.isUserLoggedIn) {
+      Either<RepositoryError, User> result = await _authRepo.getLoggedInUser();
+      result.match(
+              (l) => emit(UserLoginFailure(error: l)),
+              (r) => emit(UserLoginSuccess(user: r))
+      );
+    } else {
+      RepositoryError notLoggedInError = RepositoryError(errorObject: "User is not logged in");
+      emit(UserLoginFailure(error: notLoggedInError));
+    }
   }
 
   void _handleUserRegisterEvent({required UserRegister event, required Emitter<UserState> emit}) async {
     emit(UserRegisterInProgress());
-    Either<RepositoryError, User> result = await _authRepo.registerUser(email: event.email, password: event.password, userName: event.name);
+    Either<RepositoryError, User> authResult = await _authRepo.registerUser(email: event.email, password: event.password, userName: event.name);
 
-    result.match(
+
+    authResult.match(
             (l) => emit(UserRegisterFailure(error: l)),
-            (r) => emit(UserRegisterSuccess(user: r))
+            (r) async {
+              Either<RepositoryError, User> userResult = await _userRepo.createUser(user: r);
+
+              userResult.match(
+                      (l) => emit(UserRegisterFailure(error: l)),
+                      (r) => emit(UserRegisterSuccess(user: r))
+              );
+            }
     );
   }
 
