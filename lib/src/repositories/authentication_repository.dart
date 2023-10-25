@@ -9,6 +9,8 @@ import 'package:clique_king_model/clique_king_model.dart';
 class AuthenticationRepository {
   final FirebaseAuth authentication;
 
+  bool get isUserLoggedIn => authentication.isSignedIn;
+
   AuthenticationRepository({required this.authentication});
 
   Future<Either<RepositoryError, User>> registerUser({required String email, required String password, required String userName}) async {
@@ -16,6 +18,17 @@ class AuthenticationRepository {
     try {
       await authentication.signUp(email, password);
       await authentication.updateProfile(displayName: userName);
+      authUser = await authentication.getUser();
+    } catch(e) {
+      return Either.left(RepositoryError(errorObject: e));
+    }
+
+    return Either.right(User.fromAuthUser(authUser));
+  }
+
+  Future<Either<RepositoryError, User>> getLoggedInUser() async {
+    auth.User authUser;
+    try {
       authUser = await authentication.getUser();
     } catch(e) {
       return Either.left(RepositoryError(errorObject: e));
