@@ -97,12 +97,19 @@ void main() async {
 
     blocTest(
       'Emits UserLoginInProgress on UserStarted Event (which should be sent on app startup)',
+      setUp: () {
+        when(
+              () => authenticationRepository.isUserLoggedIn,
+        ).thenReturn(true);
+        when(
+              () => authenticationRepository.getLoggedInUser(),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
+      },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
-      act: (bloc) => bloc.add(UserStarted()), // UserStarted is a Naming Convention
-      expect: () => [UserLoginInProgress()], // why userstarted -> userlogin?
-      // try login using local token if exists?
+      act: (bloc) => bloc.add(UserStarted()),
+      expect: () => [UserLoginInProgress(), UserLoginSuccess(user: validUser)],
     );
 
     blocTest(
