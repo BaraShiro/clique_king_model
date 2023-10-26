@@ -30,6 +30,10 @@ class Score extends Equatable {
     'score': score,
   };
 
+  Score increaseScore({required int increase}) {
+    return Score(userId: userId, userName: userName, score: score + increase);
+  }
+
   @override
   List<Object?> get props => [userId, userName, score];
 }

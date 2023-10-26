@@ -275,6 +275,9 @@ void main() {
 
     final Score validScore = Score(userId: validId, userName: validUserName, score: 0);
     final Map<String, dynamic> validScoreMap = validScore.toMap();
+    final int increase = 1;
+    final Score validScoreIncreased = validScore.increaseScore(increase: increase);
+    final Map<String, dynamic> validScoreIncreasedMap = validScoreIncreased.toMap();
 
     final String validCliqueName = "validCliqueName";
     final Clique validClique = Clique(name: validCliqueName);
@@ -291,12 +294,14 @@ void main() {
 
     setUp(() {
       reset(mockFirestore);
-      reset(mockCliqueCollectionReference);
-      reset(mockScoreCollectionReference);
       reset(mockCliqueDocument);
       reset(mockScoreDocument);
       reset(mockCliqueStream);
       reset(mockScoreStream);
+      reset(mockCliqueDocumentReference);
+      reset(mockScoreDocumentReference);
+      reset(mockCliqueCollectionReference);
+      reset(mockScoreCollectionReference);
 
       when(
         () => mockFirestore.collection(cliqueCollection)
@@ -329,6 +334,14 @@ void main() {
       when(
         () => mockScoreDocumentReference.delete()
       ).thenAnswer((_) => Future<void>.value());
+
+      when(
+        () => mockScoreDocumentReference.update(validScoreIncreasedMap)
+      ).thenAnswer((_) => Future<void>.value());
+
+      when(
+        () => mockScoreDocumentReference.get()
+      ).thenAnswer((_) => Future<Document>.value(mockScoreDocument));
 
       when(
         () => mockCliqueCollectionReference.stream
@@ -397,6 +410,23 @@ void main() {
 
       verify(() => mockCliqueDocumentReference.delete());
       expect(result.isNone(), isTrue);
+    });
+
+    test("increaseScore(), called with valid data, document.update() is called and returns no RepositoryError", () async {
+      final Option<RepositoryError> result = await cliqueRepository.increaseScore(cliqueId: validCliqueId, score: validScore, scoreIncrease: increase);
+
+      verify(() => mockScoreDocumentReference.update(any()));
+      expect(result.isNone(), isTrue);
+    });
+
+    test("getScore(), called with valid data, document.get() is called and returns a valid Score", () async {
+      final Either<RepositoryError, Score> result = await cliqueRepository.getScore(cliqueId: validCliqueId, userId: validId);
+
+      Score score = result.getOrElse((l) => throw Exception("Not a valid Score! Error: ${l.errorObject}"));
+
+      verify(() => mockScoreDocumentReference.get());
+      expect(result.isRight(), isTrue);
+      expect(score, equals(validScore));
     });
 
   });

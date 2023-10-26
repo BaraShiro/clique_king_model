@@ -108,4 +108,35 @@ class CliqueRepository {
     return Option.none();
   }
 
+  Future<Either<RepositoryError, Score>> getScore({required CliqueId cliqueId, required UserId userId}) async {
+    Document document;
+    try {
+      document = await store
+          .collection(cliqueCollection)
+          .document(cliqueId)
+          .collection(participantCollection)
+          .document(userId)
+          .get();
+    } catch(e) {
+      return Either.left(FailedToReadScore(errorObject: e));
+    }
+
+    return Either.right(Score.fromMap(document.map));
+  }
+
+  Future<Option<RepositoryError>> increaseScore({required CliqueId cliqueId, required Score score, required int scoreIncrease}) async {
+    Score newScore = score.increaseScore(increase: scoreIncrease);
+    try {
+      await store
+          .collection(cliqueCollection)
+          .document(cliqueId)
+          .collection(participantCollection)
+          .document(score.userId)
+          .update(newScore.toMap());
+    } catch(e) {
+      return Option.of(FailedToIncreaseScore(errorObject: e));
+    }
+
+    return Option.none();
+  }
 }
