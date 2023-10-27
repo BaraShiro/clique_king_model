@@ -134,7 +134,7 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
         _authRepo = authenticationRepository,
         super(UserInitial()) {
     on<UserEvent>(
-      (event, emit) async {
+      (UserEvent event, Emitter<UserState> emit) async {
         switch (event) {
           case UserStarted():
             await _handleUserStartedEvent(event: event, emit: emit);
