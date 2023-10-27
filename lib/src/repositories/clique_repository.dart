@@ -108,6 +108,20 @@ class CliqueRepository {
     return Option.none();
   }
 
+  Future<Either<RepositoryError, Clique>> getClique({required CliqueId cliqueId}) async {
+    Document document;
+    try {
+      document = await store
+          .collection(cliqueCollection)
+          .document(cliqueId)
+          .get();
+    } catch(e) {
+      return Either.left(FailedToReadClique(errorObject: e));
+    }
+
+    return Either.right(Clique.fromMap(document.map));
+  }
+
   Future<Either<RepositoryError, Score>> getScore({required CliqueId cliqueId, required UserId userId}) async {
     Document document;
     try {

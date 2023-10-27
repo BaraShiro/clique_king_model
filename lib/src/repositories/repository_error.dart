@@ -91,6 +91,10 @@ final class FailedToDeleteClique extends RepositoryError {
   FailedToDeleteClique({required super.errorObject});
 }
 
+final class FailedToReadClique extends RepositoryError {
+  FailedToReadClique({required super.errorObject});
+}
+
 final class FailedToIncreaseScore extends RepositoryError {
   FailedToIncreaseScore({required super.errorObject});
 }
