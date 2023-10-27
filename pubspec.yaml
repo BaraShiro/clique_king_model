@@ -1,7 +1,7 @@
 name: clique_king_model
-description: A starting point for Dart libraries or applications.
+description: Model library for the Clique King app
 version: 1.0.0
-# repository: https://github.com/my_org/my_repo
+repository: https://github.com/BaraShiro/clique_king_model
 
 environment:
   sdk: ^3.1.0
@@ -18,8 +18,9 @@ dependencies:
   mocktail: ^1.0.1
   fpdart: ^1.1.0
   uuid: ^4.0.0
+  email_validator: ^2.1.16
   # path: ^1.8.0
 
 dev_dependencies:
-  lints: ^2.0.0
+  lints: ^3.0.0
   test: ^1.21.0
