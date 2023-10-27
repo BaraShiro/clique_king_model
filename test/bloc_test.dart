@@ -6,65 +6,191 @@ import 'package:mocktail/mocktail.dart';
 
 class MockAuthenticationRepository extends Mock implements AuthenticationRepository {}
 class MockUserRepository extends Mock implements UserRepository {}
+class MockCliqueRepository extends Mock implements CliqueRepository {}
 
 void main() async {
 
-  // group('Clique Bloc tests', () {
-  //   late AuthenticationRepository authenticationRepository;
-  //   late UserRepository userRepository;
-  //   setUpAll(() async {
-  //     final env = DotEnv(includePlatformEnvironment: true)..load();
-  //     String? apiKey = env['FIREBASE_API_KEY'];
-  //     String? projectId = env['FIREBASE_PROJECT_ID'];
-  //
-  //     if (apiKey == null) {
-  //       print("FIREBASE_API_KEY missing from .env file");
-  //       exit(0);
-  //     }
-  //
-  //     if (projectId == null) {
-  //       print("FIREBASE_PROJECT_ID missing from .env file");
-  //       exit(0);
-  //     }
-  //
-  //     FirebaseAuth.initialize(
-  //         apiKey, await HiveStore.create(path: Directory.current.path));
-  //     Firestore.initialize(projectId);
-  //     authenticationRepository =
-  //         AuthenticationRepository(auth: FirebaseAuth.instance);
-  //     userRepository = UserRepository(store: Firestore.instance);
-  //   });
-  //
-  //
-  // });
+  group('Clique Bloc tests', () {
+    final CliqueRepository cliqueRepository = MockCliqueRepository();
+    final UserRepository userRepository = MockUserRepository();
 
-  // group('Cliques Bloc tests', () {
-  //
-  //   setUpAll(() {
-  //
-  //   });
-  //
-  //   tearDownAll(() {
-  //
-  //   });
-  //
-  //   setUp(() {
-  //
-  //   });
-  //
-  //   tearDown(() {
-  //
-  //   });
-  //
-  //   blocTest(
-  //     '',
-  //     build: () => {},
-  //     act: (bloc) => {},
-  //     expect: () => {},
-  //     verify: (bloc) => {},
-  //   );
-  //
-  // });
+    final String validId = "valid_id";
+    final String validEmail = "valid@email.com";
+    final String validUserName = "ValidUser";
+
+    final User validUser = User(id: validId, name: validUserName, email: validEmail);
+
+    final String validCliqueName = "validCliqueName";
+    final Clique validClique = Clique(name: validCliqueName);
+    final CliqueId validCliqueId = validClique.id;
+
+    final int scoreIncrease = 1;
+    final Score score = Score.fromUser(validUser);
+    final Score increasedScore = score.increaseScore(increase: scoreIncrease);
+
+    final Score score1 = Score(userId: "userId1", userName: "userName1", score: 1);
+    final Score score42 = Score(userId: "userId2", userName: "userName2", score: 42);
+    final Score score5 = Score(userId: "userId3", userName: "userName3", score: 5);
+
+    Stream<List<Score>> scoreStream() async* {
+      yield [score1];
+      yield [score1, score42];
+      yield [score1, score42, score5];
+    }
+
+    setUpAll(() {
+      reset(cliqueRepository);
+      reset(userRepository);
+    });
+
+    blocTest(
+      'Nothing emitted when created, initial state == CliqueInitial',
+      build: () => CliqueBloc(
+          cliqueRepository: cliqueRepository),
+      expect: () => [],
+      verify: (bloc) => bloc.state is CliqueInitial,
+    );
+
+    blocTest(
+      'Emits CliqueLoadingSuccess on CliqueLoad Event',
+      setUp: () {
+        when(
+          () => cliqueRepository.readScoresFromClique(cliqueId: validCliqueId),
+        ).thenAnswer((_) => Either<RepositoryError, Stream<List<Score>>>.of(scoreStream()));
+        when(
+          () => cliqueRepository.getClique(cliqueId: validCliqueId),
+        ).thenAnswer((_) => Future<Either<RepositoryError, Clique>>.value(Either.of(validClique)));
+      },
+      build: () => CliqueBloc(cliqueRepository: cliqueRepository),
+      act: (bloc) => bloc.add(CliqueLoad(cliqueId: validCliqueId)),
+      expect: () => [
+        CliqueLoadingInProgress(),
+        CliqueLoadingSuccess(clique: validClique, allScoresSorted: [score1]),
+        CliqueLoadingSuccess(clique: validClique, allScoresSorted: [score42, score1]),
+        CliqueLoadingSuccess(clique: validClique, allScoresSorted: [score42, score5, score1])
+      ],
+      verify: (bloc) => bloc.state is CliqueLoadingSuccess,
+    );
+
+    blocTest(
+      'Emits CliqueIncreaseScoreSuccess on CliqueIncreaseScore Event',
+      setUp: () {
+        when(
+          () => cliqueRepository.getScore(cliqueId: validCliqueId, userId: validId),
+        ).thenAnswer((_) => Future<Either<RepositoryError, Score>>.value(Either.of(score)));
+        when(
+          () => cliqueRepository.increaseScore(cliqueId: validCliqueId, score: score, scoreIncrease: scoreIncrease),
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.none()));
+      },
+      build: () => CliqueBloc(cliqueRepository: cliqueRepository),
+      act: (bloc) => bloc.add(CliqueIncreaseScore(cliqueId: validCliqueId, user: validUser, increase: scoreIncrease)),
+      expect: () => [CliqueIncreaseScoreInProgress(), CliqueIncreaseScoreSuccess()],
+      verify: (bloc) => bloc.state is CliqueIncreaseScoreSuccess,
+    );
+
+    blocTest(
+      'Emits CliqueJoinSuccess on CliqueJoin Event',
+      setUp: () {
+        when(
+          () => cliqueRepository.addUser(cliqueId: validCliqueId, user: validUser),
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.none()));
+      },
+      build: () => CliqueBloc(cliqueRepository: cliqueRepository),
+      act: (bloc) => bloc.add(CliqueJoin(cliqueId: validCliqueId, user: validUser)),
+      expect: () => [CliqueJoinInProgress(), CliqueJoinSuccess()],
+      verify: (bloc) => bloc.state is CliqueJoinSuccess,
+    );
+
+    blocTest(
+      'Emits CliqueLeaveSuccess on CliqueLeave Event',
+      setUp: () {
+        when(
+              () => cliqueRepository.removeUser(cliqueId: validCliqueId, userId: validId),
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.none()));
+      },
+      build: () => CliqueBloc(cliqueRepository: cliqueRepository),
+      act: (bloc) => bloc.add(CliqueLeave(cliqueId: validCliqueId, user: validUser)),
+      expect: () => [CliqueLeaveInProgress(), CliqueLeaveSuccess()],
+      verify: (bloc) => bloc.state is CliqueLeaveSuccess,
+    );
+
+  });
+
+  group('Cliques Bloc tests', () {
+    final CliqueRepository cliqueRepository = MockCliqueRepository();
+
+    final String validCliqueName1 = "validCliqueName1";
+    final Clique validClique1 = Clique(name: validCliqueName1);
+    final CliqueId validCliqueId1 = validClique1.id;
+
+    final String validCliqueName2 = "validCliqueName2";
+    final Clique validClique2 = Clique(name: validCliqueName2);
+    final CliqueId validCliqueId2 = validClique2.id;
+
+    Stream<List<Clique>> cliqueStream() async* {
+      yield [validClique1];
+      yield [validClique1, validClique2];
+    }
+
+    setUpAll(() {
+      reset(cliqueRepository);
+    });
+
+    blocTest(
+      'Nothing emitted when created, initial state == CliquesInitial',
+      build: () => CliquesBloc(
+          cliqueRepository: cliqueRepository),
+      expect: () => [],
+      verify: (bloc) => bloc.state is CliquesInitial,
+    );
+
+    blocTest(
+      'Emits CliquesLoadingSuccess on CliquesLoadEvent',
+      setUp: () {
+        when(
+          () => cliqueRepository.readAllCliques(),
+        ).thenAnswer((_) => Either<RepositoryError, Stream<List<Clique>>>.of(cliqueStream()));
+      },
+      build: () => CliquesBloc(
+          cliqueRepository: cliqueRepository),
+      act: (bloc) => bloc.add(CliquesLoad()),
+      expect: () => [
+        CliquesLoadingInProgress(),
+        CliquesLoadingSuccess(cliques: [validClique1]),
+        CliquesLoadingSuccess(cliques: [validClique1, validClique2])
+      ],
+      verify: (bloc) => bloc.state is CliquesLoadingSuccess,
+    );
+
+    blocTest(
+      'Emits AddCliqueSuccess on AddClique',
+      setUp: () {
+        when(
+          () => cliqueRepository.createClique(name: validCliqueName1),
+        ).thenAnswer((_) => Future<Either<RepositoryError, Clique>>.value(Either.of(validClique1)));
+      },
+      build: () => CliquesBloc(
+          cliqueRepository: cliqueRepository),
+      act: (bloc) => bloc.add(AddClique(name: validCliqueName1)),
+      expect: () => [AddCliqueInProgress(), AddCliqueSuccess(clique: validClique1)],
+      verify: (bloc) => bloc.state is AddCliqueSuccess,
+    );
+
+    blocTest(
+      'Emits RemoveCliqueSuccess on RemoveClique',
+      setUp: () {
+        when(
+          () => cliqueRepository.deleteClique(cliqueId: validCliqueId1),
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.none()));
+      },
+      build: () => CliquesBloc(
+          cliqueRepository: cliqueRepository),
+      act: (bloc) => bloc.add(RemoveClique(cliqueId: validCliqueId1)),
+      expect: () => [RemoveCliqueInProgress(), RemoveCliqueSuccess()],
+      verify: (bloc) => bloc.state is RemoveCliqueSuccess,
+    );
+
+  });
 
   group('User Bloc tests', () {
     final AuthenticationRepository authenticationRepository = MockAuthenticationRepository();
@@ -99,7 +225,7 @@ void main() async {
     );
 
     blocTest(
-      'Emits UserLoginInProgress on UserStarted Event (which should be sent on app startup)',
+      'Emits UserLoginSuccess on UserStarted Event (which should be sent on app startup)',
       setUp: () {
         when(
               () => authenticationRepository.isUserLoggedIn,
@@ -113,6 +239,7 @@ void main() async {
           userRepository: userRepository),
       act: (bloc) => bloc.add(UserStarted()),
       expect: () => [UserLoginInProgress(), UserLoginSuccess(user: validUser)],
+      verify: (bloc) => bloc.state is UserLoginSuccess,
     );
 
     blocTest(
@@ -239,6 +366,5 @@ void main() async {
     );
 
   });
-
 
 }
