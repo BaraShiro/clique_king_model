@@ -324,6 +324,10 @@ void main() {
       ).thenAnswer((_) => Future<Document>.value(mockCliqueDocument));
 
       when(
+        () => mockCliqueDocumentReference.get()
+      ).thenAnswer((_) => Future<Document>.value(mockCliqueDocument));
+
+      when(
         () => mockScoreCollectionReference.document(validId)
       ).thenReturn(mockScoreDocumentReference);
 
@@ -410,6 +414,16 @@ void main() {
 
       verify(() => mockCliqueDocumentReference.delete());
       expect(result.isNone(), isTrue);
+    });
+
+    test("getClique(), called with valid data, collection.get() is called and returns a valid Clique", () async {
+      final Either<RepositoryError, Clique> result = await cliqueRepository.getClique(cliqueId: validCliqueId);
+
+      Clique clique = result.getOrElse((l) => throw Exception("Not a valid Clique! Error: ${l.errorObject}"));
+
+      verify(() => mockCliqueDocumentReference.get());
+      expect(result.isRight(), isTrue);
+      expect(clique, validClique);
     });
 
     test("increaseScore(), called with valid data, document.update() is called and returns no RepositoryError", () async {
