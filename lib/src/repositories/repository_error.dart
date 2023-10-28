@@ -1,10 +1,14 @@
+import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
 
 @immutable
-sealed class RepositoryError {
+sealed class RepositoryError extends Equatable{
   final Object errorObject;
 
   RepositoryError({required this.errorObject});
+
+  @override
+  List<Object?> get props => [errorObject];
 }
 
 final class FailedToGetAccount extends RepositoryError {
@@ -61,6 +65,10 @@ final class FailedToCreateUser extends RepositoryError {
 
 final class FailedToReadUser extends RepositoryError {
   FailedToReadUser({required super.errorObject});
+}
+
+final class FailedToQueryUsers extends RepositoryError {
+  FailedToQueryUsers({required super.errorObject});
 }
 
 final class FailedToDeleteUser extends RepositoryError {
