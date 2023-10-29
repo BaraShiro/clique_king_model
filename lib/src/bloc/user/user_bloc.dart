@@ -18,6 +18,12 @@ final class UserRegister extends UserEvent {
       {required this.email, required this.password, required this.name});
 }
 
+final class UserUpdate extends UserEvent {
+  final String name;
+
+  UserUpdate({required this.name});
+}
+
 final class UserLogin extends UserEvent {
   final String email;
   final String password;
@@ -85,6 +91,29 @@ final class UserRegisterFailure extends UserState {
   List<Object?> get props => [error];
 }
 
+final class UserUpdateInProgress extends UserState {
+  @override
+  List<Object?> get props => [];
+}
+
+final class UserUpdateSuccess extends UserState {
+  final User user;
+
+  UserUpdateSuccess({required this.user});
+
+  @override
+  List<Object?> get props => [user];
+}
+
+final class UserUpdateFailure extends UserState {
+  final RepositoryError error;
+
+  UserUpdateFailure({required this.error});
+
+  @override
+  List<Object?> get props => [error];
+}
+
 final class UserLogoutInProgress extends UserState {
   @override
   List<Object?> get props => [];
@@ -140,6 +169,8 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
             await _handleUserStartedEvent(event: event, emit: emit);
           case UserRegister():
             await _handleUserRegisterEvent(event: event, emit: emit);
+          case UserUpdate():
+            await _handleUserUpdateEvent(event: event, emit: emit);
           case UserLogin():
             await _handleUserLoginEvent(event: event, emit: emit);
           case UserLogout():
@@ -195,6 +226,41 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
               createResult.match(
                       (l) => emit(UserRegisterFailure(error: l)),
                       (r) => emit(UserRegisterSuccess(user: r))
+              );
+            }
+    );
+  }
+
+  Future<void> _handleUserUpdateEvent({required UserUpdate event, required Emitter<UserState> emit}) async {
+    emit(UserUpdateInProgress());
+    Either<RepositoryError, bool> existResult = await _userRepo.userExists(userName: event.name);
+
+    bool error = existResult.match(
+            (l) {
+              emit(UserRegisterFailure(error: l));
+              return true;
+        },
+            (r) {
+          if(r) {
+            RepositoryError userExistsError = UserNameAlreadyInUse(errorObject: "User name is already in use.");
+            emit(UserRegisterFailure(error: userExistsError));
+          }
+          return r;
+        }
+    );
+
+    if(error) return;
+
+    Either<RepositoryError, User> accountResult = await _authRepo.updateUser(userName: event.name);
+
+    await accountResult.match(
+            (l) async => emit(UserUpdateFailure(error: l)),
+            (r) async {
+              Either<RepositoryError, User> userResult = await _userRepo.updateUser(user: r);
+
+              userResult.match(
+                      (l) => emit(UserUpdateFailure(error: l)),
+                      (r) => emit(UserUpdateSuccess(user: r))
               );
             }
     );

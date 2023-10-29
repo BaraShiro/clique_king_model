@@ -183,8 +183,6 @@ void main() {
 
     final String validToBeUpdatedId = "valid_update_id";
 
-    final User validToBeUpdatedUser = User(id: validToBeUpdatedId, name: validUserName, email: validEmail);
-
     final String validUpdatedUserName = "ValidUserUpdated";
 
     final User validUpdatedUser = User(id: validToBeUpdatedId, name: validUpdatedUserName, email: validEmail);
@@ -257,7 +255,8 @@ void main() {
     });
 
     test("updateUser(), called with valid data, returns a valid User", () async {
-      Either<RepositoryError, User> result = await userRepository.updateUser(user: validToBeUpdatedUser, newName: validUpdatedUserName);
+
+      Either<RepositoryError, User> result = await userRepository.updateUser(user: validUpdatedUser);
       User user = result.getOrElse((l) => throw Exception(l.errorObject));
 
       verify(() => mockToBeUpdatedUserDocumentReference.update(any()));

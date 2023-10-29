@@ -49,6 +49,29 @@ class AuthenticationRepository {
     return Either.right(User.fromAuthUser(authUser));
   }
 
+  // TODO: tests
+  Future<Either<RepositoryError, User>> updateUser({required String userName}) async {
+    userName = sanitizeUserName(userName);
+    if(userName.isEmpty) return Either.left(InvalidUserName(errorObject: "Invalid user name, can not be empty or only whitespace."));
+
+    try {
+    await authentication.updateProfile(displayName: userName);
+    } catch(e) {
+    return Either.left(FailedToUpdateAccount(errorObject: e));
+    }
+
+    final auth.User authUser;
+
+    try {
+      authUser = await authentication.getUser();
+    } catch(e) {
+      return Either.left(FailedToGetAccount(errorObject: e));
+    }
+
+    return Either.right(User.fromAuthUser(authUser));
+  }
+
+
   Future<Either<RepositoryError, User>> getLoggedInUser() async {
     auth.User authUser;
     try {

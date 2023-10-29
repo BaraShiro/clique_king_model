@@ -49,14 +49,13 @@ class UserRepository {
     return Either.right(users.isNotEmpty);
   }
 
-  Future<Either<RepositoryError, User>> updateUser({required User user, required String newName}) async {
-    User updatedUser = user.updateName(newName);
+  Future<Either<RepositoryError, User>> updateUser({required User user}) async {
     Document document;
     try {
       await store
           .collection(userCollection)
           .document(user.id)
-          .update(updatedUser.toMap());
+          .update(user.toMap());
     } catch (e) {
       return Either.left(FailedToUpdateUser(errorObject: e));
     }
