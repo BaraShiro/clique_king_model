@@ -10,6 +10,7 @@ export 'src/repositories/authentication_repository.dart';
 export 'src/repositories/clique_repository.dart';
 export 'src/repositories/repository_error.dart';
 export 'src/models/repositories.dart';
+export 'src/models/helpers.dart';
 export 'src/models/clique.dart';
 export 'src/models/score.dart';
 export 'src/models/user.dart';
