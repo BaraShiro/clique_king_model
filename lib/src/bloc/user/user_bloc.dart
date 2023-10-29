@@ -167,14 +167,32 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
 
   Future<void> _handleUserRegisterEvent({required UserRegister event, required Emitter<UserState> emit}) async {
     emit(UserRegisterInProgress());
-    Either<RepositoryError, User> authResult = await _authRepo.registerUser(email: event.email, password: event.password, userName: event.name);
+    Either<RepositoryError, bool> existResult = await _userRepo.userExists(userName: event.name);
 
-    await authResult.match(
+    bool error = existResult.match(
+            (l) {
+              emit(UserRegisterFailure(error: l));
+              return true;
+            },
+            (r) {
+              if(r) {
+                RepositoryError userExistsError = UserNameAlreadyInUse(errorObject: "User name is already in use.");
+                emit(UserRegisterFailure(error: userExistsError));
+              }
+              return r;
+            }
+    );
+
+    if(error) return;
+
+    Either<RepositoryError, User> registerResult = await _authRepo.registerUser(email: event.email, password: event.password, userName: event.name);
+
+    await registerResult.match(
             (l) async => emit(UserRegisterFailure(error: l)),
             (r) async {
-              Either<RepositoryError, User> userResult = await _userRepo.createUser(user: r);
+              Either<RepositoryError, User> createResult = await _userRepo.createUser(user: r);
 
-              userResult.match(
+              createResult.match(
                       (l) => emit(UserRegisterFailure(error: l)),
                       (r) => emit(UserRegisterSuccess(user: r))
               );
