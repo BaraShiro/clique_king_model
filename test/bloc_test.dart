@@ -205,10 +205,11 @@ void main() async {
     final String invalidUserName = "InvalidUser";
 
     final User validUser = User(id: validId, name: validUserName, email: validEmail);
-    final FailedToRegisterAccount failedToRegisterAccount = FailedToRegisterAccount(errorObject: "Failed to register");
-    final WrongLoginCredentials wrongLoginCredentials = WrongLoginCredentials(errorObject: "Wrong email or password");
-    final FailedToLogoutAccount failedToLogoutAccount = FailedToLogoutAccount(errorObject: "Failed to logout");
-    final FailedToDeleteAccount failedToDeleteAccount = FailedToDeleteAccount(errorObject: "Failed to delete");
+    final FailedToRegisterAccount failedToRegisterAccount = FailedToRegisterAccount(errorObject: "Failed to register.");
+    final WrongLoginCredentials wrongLoginCredentials = WrongLoginCredentials(errorObject: "Wrong email or password.");
+    final FailedToLogoutAccount failedToLogoutAccount = FailedToLogoutAccount(errorObject: "Failed to logout.");
+    final FailedToDeleteAccount failedToDeleteAccount = FailedToDeleteAccount(errorObject: "Failed to delete.");
+    final UserNameAlreadyInUse userNameAlreadyInUse = UserNameAlreadyInUse(errorObject: "User name is already in use.");
 
     setUp(() {
       reset(authenticationRepository);
@@ -246,11 +247,14 @@ void main() async {
       'Emits UserRegisterSuccess on UserRegister Event',
       setUp: () {
         when(
-            () => authenticationRepository.registerUser(email: validEmail, password: validPassword, userName: validUserName),
+              () => authenticationRepository.registerUser(email: validEmail, password: validPassword, userName: validUserName),
         ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
         when(
               () => userRepository.createUser(user: validUser),
         ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
+        when(
+              () => userRepository.userExists(userName: validUserName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.right(false)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
@@ -266,12 +270,33 @@ void main() async {
         when(
               () => authenticationRepository.registerUser(email: invalidEmail, password: invalidPassword, userName: invalidUserName),
         ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(failedToRegisterAccount)));
+        when(
+              () => userRepository.userExists(userName: invalidUserName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.right(false)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
       act: (bloc) => bloc.add(UserRegister(email: invalidEmail, password: invalidPassword, name: invalidUserName)),
       expect: () => [UserRegisterInProgress(), UserRegisterFailure(error: failedToRegisterAccount)],
+      verify: (bloc) => bloc.state is UserRegisterFailure,
+    );
+
+    blocTest(
+      'Emits UserRegisterFailure on UserRegister Event with existing user name',
+      setUp: () {
+        when(
+              () => authenticationRepository.registerUser(email: invalidEmail, password: invalidPassword, userName: invalidUserName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(failedToRegisterAccount)));
+        when(
+              () => userRepository.userExists(userName: invalidUserName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.right(true)));
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserRegister(email: invalidEmail, password: invalidPassword, name: invalidUserName)),
+      expect: () => [UserRegisterInProgress(), UserRegisterFailure(error: userNameAlreadyInUse)],
       verify: (bloc) => bloc.state is UserRegisterFailure,
     );
 
