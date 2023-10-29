@@ -34,6 +34,21 @@ class UserRepository {
     return Either.right(User.fromMap(document.map));
   }
 
+  Future<Either<RepositoryError, bool>> userExists({required String userName}) async {
+    userName = sanitizeUserName(userName);
+    if(userName.isEmpty) return Either.left(InvalidUserName(errorObject: "Invalid user name, can not be empty or only whitespace."));
+
+    List<Document> users;
+    try {
+      QueryReference query = store.collection(userCollection).where("name", isEqualTo: userName);
+      users = await query.get();
+    } catch(e) {
+      return Either.left(FailedToQueryUsers(errorObject: e));
+    }
+
+    return Either.right(users.isNotEmpty);
+  }
+
   Future<Either<RepositoryError, User>> updateUser({required User user, required String newName}) async {
     User updatedUser = user.updateName(newName);
     Document document;
