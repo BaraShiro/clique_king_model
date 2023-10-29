@@ -24,3 +24,4 @@ typedef CliqueId = String;
 const String userCollection = "users";
 const String cliqueCollection = "cliques";
 const String participantCollection = "participants";
+const int minimumPasswordLength = 8;
