@@ -107,6 +107,24 @@ void main() {
       expect(result.isLeft(), isTrue);
     });
 
+    test("getLoggedInUser(), called when user is logged in, returns a valid User", () async {
+
+      final Either<RepositoryError, User> result = await authenticationRepository.getLoggedInUser();
+      final User user = result.getOrElse((l) => throw Exception("Not a valid User"));
+
+      expect(user, equals(validUser));
+    });
+
+    test("getLoggedInUser(), called when user is not logged in, returns a RepositoryError", () async {
+      when(
+              () => mockFirebaseAuth.getUser()
+      ).thenThrow(Exception("Repository Error"));
+
+      final Either<RepositoryError, User> result = await authenticationRepository.getLoggedInUser();
+
+      expect(result.isLeft(), isTrue);
+    });
+
     test("loginUser(), called with valid data, returns a valid User", () async {
 
       final Either<RepositoryError, User> result = await authenticationRepository.loginUser(
