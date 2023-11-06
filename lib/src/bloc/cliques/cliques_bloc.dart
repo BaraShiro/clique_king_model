@@ -95,9 +95,12 @@ final class RemoveCliqueFailure extends CliquesState {
 
 final class CliquesBloc extends Bloc<CliquesEvent, CliquesState> {
   final CliqueRepository _cliqueRepo;
+  final AuthenticationRepository _authRepo;
 
-  CliquesBloc({required CliqueRepository cliqueRepository})
+  CliquesBloc({required CliqueRepository cliqueRepository,
+              required AuthenticationRepository authenticationRepository})
       : _cliqueRepo = cliqueRepository,
+        _authRepo = authenticationRepository,
         super(CliquesInitial()) {
     on<CliquesEvent>(
       (CliquesEvent event, Emitter<CliquesState> emit) async {
@@ -127,11 +130,18 @@ final class CliquesBloc extends Bloc<CliquesEvent, CliquesState> {
   Future<void> _handleAddCliqueEvent({required AddClique event, required Emitter<CliquesState> emit}) async {
     emit(AddCliqueInProgress());
 
-    Either<RepositoryError, Clique> result = await _cliqueRepo.createClique(name: event.name);
+    Either<RepositoryError, User> userResult = await _authRepo.getLoggedInUser();
 
-    result.match(
-            (l) => emit(AddCliqueFailure(error: l)),
-            (r) => emit(AddCliqueSuccess(clique: r))
+    await userResult.match(
+            (l) async => emit(AddCliqueFailure(error: l)),
+            (rUser) async {
+              Either<RepositoryError, Clique> result = await _cliqueRepo.createClique(name: event.name, creatorId: rUser.id);
+
+              result.match(
+                      (l) => emit(AddCliqueFailure(error: l)),
+                      (rClique) => emit(AddCliqueSuccess(clique: rClique))
+              );
+            }
     );
 
   }
@@ -139,12 +149,35 @@ final class CliquesBloc extends Bloc<CliquesEvent, CliquesState> {
   Future<void> _handleRemoveCliqueEvent({required RemoveClique event, required Emitter<CliquesState> emit}) async {
     emit(RemoveCliqueInProgress());
 
-    Option<RepositoryError> result = await _cliqueRepo.deleteClique(cliqueId: event.cliqueId);
+    Either<RepositoryError, User> userResult = await _authRepo.getLoggedInUser();
 
-    result.match(
-            () => emit(RemoveCliqueSuccess()),
-            (t) => emit(RemoveCliqueFailure(error: t))
+    bool userHasPermission = false;
+    await userResult.match(
+            (l) async => emit(RemoveCliqueFailure(error: l)),
+            (rUser) async {
+              Either<RepositoryError, Clique> cliqueResult = await _cliqueRepo.getClique(cliqueId: event.cliqueId);
+
+              cliqueResult.match(
+                      (l) => emit(RemoveCliqueFailure(error: l)),
+                      (rClique) {
+                        userHasPermission = rClique.creatorId == rUser.id;
+                      }
+              );
+            }
     );
+
+    if(userHasPermission) {
+      Option<RepositoryError> result = await _cliqueRepo.deleteClique(cliqueId: event.cliqueId);
+
+      result.match(
+              () => emit(RemoveCliqueSuccess()),
+              (t) => emit(RemoveCliqueFailure(error: t))
+      );
+    } else {
+      RepositoryError error = UserPermissionViolation(errorObject: "Only the creator of a clique can delete it.");
+      emit(RemoveCliqueFailure(error: error));
+    }
+
   }
 
 }

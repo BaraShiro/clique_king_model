@@ -18,7 +18,7 @@ void main() {
     final MockFirebaseAuth mockFirebaseAuth = MockFirebaseAuth();
     final AuthenticationRepository authenticationRepository = AuthenticationRepository(authentication: mockFirebaseAuth);
 
-    final String validId = "valid_id";
+    final UserId validId = "valid_id";
     final String validEmail = "valid@email.com";
     final String invalidEmail = "invalid@email.com";
     final String validPassword = "valid_password";
@@ -174,7 +174,7 @@ void main() {
     final MockDocumentReference mockToBeUpdatedUserDocumentReference = MockDocumentReference();
 
 
-    final String validId = "valid_id";
+    final UserId validId = "valid_id";
     final String validEmail = "valid@email.com";
     final String validUserName = "ValidUser";
 
@@ -284,7 +284,7 @@ void main() {
     final MockCollectionReference mockCliqueCollectionReference = MockCollectionReference();
     final MockCollectionReference mockScoreCollectionReference = MockCollectionReference();
 
-    final String validId = "valid_id";
+    final UserId validId = "valid_id";
     final String validEmail = "valid@email.com";
     final String validUserName = "ValidUser";
 
@@ -297,7 +297,7 @@ void main() {
     final Map<String, dynamic> validScoreIncreasedMap = validScoreIncreased.toMap();
 
     final String validCliqueName = "validCliqueName";
-    final Clique validClique = Clique(name: validCliqueName);
+    final Clique validClique = Clique(name: validCliqueName, creatorId: validId);
     final CliqueId validCliqueId = validClique.id;
     final Map<String, dynamic> validCliqueMap = validClique.toMap();
 
@@ -383,7 +383,7 @@ void main() {
     });
 
     test("createClique(), called with valid data, document.create() is called and returns a valid Clique", () async {
-      Either<RepositoryError, Clique> result = await cliqueRepository.createClique(name: validCliqueName);
+      Either<RepositoryError, Clique> result = await cliqueRepository.createClique(name: validCliqueName, creatorId: validId);
       Clique clique = result.getOrElse((l) => throw Exception("Not a valid Clique! Error: ${l.errorObject}"));
 
       verify(() => mockCliqueDocumentReference.create(any()));

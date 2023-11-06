@@ -10,8 +10,8 @@ class CliqueRepository {
 
   CliqueRepository({required this.store});
 
-  Future<Either<RepositoryError, Clique>> createClique({required String name}) async {
-    Clique clique = Clique(name: name);
+  Future<Either<RepositoryError, Clique>> createClique({required String name, required UserId creatorId}) async {
+    Clique clique = Clique(name: name, creatorId: creatorId);
     Document cliqueDocument;
     try {
       cliqueDocument = await store

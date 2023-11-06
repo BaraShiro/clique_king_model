@@ -114,3 +114,7 @@ final class FailedToReadScore extends RepositoryError {
 final class FailedToLoadCliques extends RepositoryError {
   FailedToLoadCliques({required super.errorObject});
 }
+
+final class UserPermissionViolation extends RepositoryError {
+  UserPermissionViolation({required super.errorObject});
+}

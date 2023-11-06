@@ -175,6 +175,7 @@ final class CliqueBloc extends Bloc<CliqueEvent, CliqueState> {
     emit(CliqueIncreaseScoreInProgress());
 
     Either<RepositoryError, Score> scoreResult = await _cliqueRepo.getScore(cliqueId: event.cliqueId, userId: event.user.id);
+
     await scoreResult.match(
             (l) async => emit(CliqueIncreaseScoreFailure(error: l)),
             (r) async {
