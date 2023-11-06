@@ -14,14 +14,14 @@ void main() async {
     final CliqueRepository cliqueRepository = MockCliqueRepository();
     final UserRepository userRepository = MockUserRepository();
 
-    final String validId = "valid_id";
+    final UserId validId = "valid_id";
     final String validEmail = "valid@email.com";
     final String validUserName = "ValidUser";
 
     final User validUser = User(id: validId, name: validUserName, email: validEmail);
 
     final String validCliqueName = "validCliqueName";
-    final Clique validClique = Clique(name: validCliqueName);
+    final Clique validClique = Clique(name: validCliqueName, creatorId: validId);
     final CliqueId validCliqueId = validClique.id;
 
     final int scoreIncrease = 1;
@@ -118,13 +118,20 @@ void main() async {
 
   group('Cliques Bloc tests', () {
     final CliqueRepository cliqueRepository = MockCliqueRepository();
+    final AuthenticationRepository authenticationRepository = MockAuthenticationRepository();
+
+    final UserId validId = "valid_id";
+    final String validEmail = "valid@email.com";
+    final String validUserName = "ValidUser";
+
+    final User validUser = User(id: validId, name: validUserName, email: validEmail);
 
     final String validCliqueName1 = "validCliqueName1";
-    final Clique validClique1 = Clique(name: validCliqueName1);
+    final Clique validClique1 = Clique(name: validCliqueName1, creatorId: validId);
     final CliqueId validCliqueId1 = validClique1.id;
 
     final String validCliqueName2 = "validCliqueName2";
-    final Clique validClique2 = Clique(name: validCliqueName2);
+    final Clique validClique2 = Clique(name: validCliqueName2, creatorId: validId);
     final CliqueId validCliqueId2 = validClique2.id;
 
     Stream<List<Clique>> cliqueStream() async* {
@@ -139,7 +146,8 @@ void main() async {
     blocTest(
       'Nothing emitted when created, initial state == CliquesInitial',
       build: () => CliquesBloc(
-          cliqueRepository: cliqueRepository),
+          cliqueRepository: cliqueRepository,
+          authenticationRepository: authenticationRepository),
       expect: () => [],
       verify: (bloc) => bloc.state is CliquesInitial,
     );
@@ -152,7 +160,8 @@ void main() async {
         ).thenAnswer((_) => Either<RepositoryError, Stream<List<Clique>>>.of(cliqueStream()));
       },
       build: () => CliquesBloc(
-          cliqueRepository: cliqueRepository),
+          cliqueRepository: cliqueRepository,
+          authenticationRepository: authenticationRepository),
       act: (bloc) => bloc.add(CliquesLoad()),
       expect: () => [
         CliquesLoadingInProgress(),
@@ -166,11 +175,16 @@ void main() async {
       'Emits AddCliqueSuccess on AddClique',
       setUp: () {
         when(
-          () => cliqueRepository.createClique(name: validCliqueName1),
+          () => cliqueRepository.createClique(name: validCliqueName1, creatorId: validId),
         ).thenAnswer((_) => Future<Either<RepositoryError, Clique>>.value(Either.of(validClique1)));
+
+        when(
+              () => authenticationRepository.getLoggedInUser(),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
       },
       build: () => CliquesBloc(
-          cliqueRepository: cliqueRepository),
+          cliqueRepository: cliqueRepository,
+          authenticationRepository: authenticationRepository),
       act: (bloc) => bloc.add(AddClique(name: validCliqueName1)),
       expect: () => [AddCliqueInProgress(), AddCliqueSuccess(clique: validClique1)],
       verify: (bloc) => bloc.state is AddCliqueSuccess,
@@ -182,9 +196,18 @@ void main() async {
         when(
           () => cliqueRepository.deleteClique(cliqueId: validCliqueId1),
         ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.none()));
+
+        when(
+              () => cliqueRepository.getClique(cliqueId: validCliqueId1),
+        ).thenAnswer((_) => Future<Either<RepositoryError, Clique>>.value(Either.right(validClique1)));
+
+        when(
+              () => authenticationRepository.getLoggedInUser(),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
       },
       build: () => CliquesBloc(
-          cliqueRepository: cliqueRepository),
+          cliqueRepository: cliqueRepository,
+          authenticationRepository: authenticationRepository),
       act: (bloc) => bloc.add(RemoveClique(cliqueId: validCliqueId1)),
       expect: () => [RemoveCliqueInProgress(), RemoveCliqueSuccess()],
       verify: (bloc) => bloc.state is RemoveCliqueSuccess,
