@@ -68,7 +68,7 @@ class UserRepository {
     return Either.right(User.fromMap(document.map));
   }
 
-  Future<Option<RepositoryError>> deleteUSer({required UserId id}) async {
+  Future<Option<RepositoryError>> deleteUser({required UserId id}) async {
     try {
       await store
           .collection(userCollection)

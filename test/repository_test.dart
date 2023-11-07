@@ -264,7 +264,7 @@ void main() {
     });
 
     test("deleteUser(), called with valid data, returns no RepositoryError", () async {
-      Option<RepositoryError> result = await userRepository.deleteUSer(id: validId);
+      Option<RepositoryError> result = await userRepository.deleteUser(id: validId);
 
       verify(() => mockUserDocumentReference.delete());
       expect(result.isNone(), isTrue);
