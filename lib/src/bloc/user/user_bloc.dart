@@ -288,11 +288,25 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
 
   Future<void> _handleUserDeleteEvent({required UserDelete event, required Emitter<UserState> emit}) async {
     emit(UserDeleteInProgress());
-    Option<RepositoryError> result = await _authRepo.deleteUser();
+    Either<RepositoryError, User> loggedInResult = await _authRepo.getLoggedInUser();
 
-    result.match(
-            () => emit(UserDeleteSuccess()),
-            (t) => emit(UserDeleteFailure(error: t))
+    await loggedInResult.match(
+            (l) async => emit(UserDeleteFailure(error: l)),
+            (r) async {
+              Option<RepositoryError> deleteUserResult = await _userRepo.deleteUser(id: r.id);
+
+              await deleteUserResult.match(
+                      () async {
+                        Option<RepositoryError> deleteAccountResult = await _authRepo.deleteUser();
+
+                        deleteAccountResult.match(
+                                () => emit(UserDeleteSuccess()),
+                                (t) => emit(UserDeleteFailure(error: t))
+                        );
+                      },
+                      (t) async => emit(UserDeleteFailure(error: t))
+              );
+            }
     );
   }
 }
