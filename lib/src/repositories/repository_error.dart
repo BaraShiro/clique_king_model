@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
 
+/// Base class for errors pertaining to interactions with various repositories.
 @immutable
 sealed class RepositoryError extends Equatable{
   final Object errorObject;
