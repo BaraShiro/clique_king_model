@@ -237,13 +237,13 @@ final class UserBloc extends Bloc<UserEvent, UserState> {
 
     bool error = existResult.match(
             (l) {
-              emit(UserRegisterFailure(error: l));
+              emit(UserUpdateFailure(error: l));
               return true;
         },
             (r) {
           if(r) {
             RepositoryError userExistsError = UserNameAlreadyInUse(errorObject: "User name is already in use.");
-            emit(UserRegisterFailure(error: userExistsError));
+            emit(UserUpdateFailure(error: userExistsError));
           }
           return r;
         }
