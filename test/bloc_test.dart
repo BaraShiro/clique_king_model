@@ -224,14 +224,26 @@ void main() async {
     final String invalidEmail = "invalid@email.com";
     final String validPassword = "valid_password";
     final String invalidPassword = "invalid_password";
-    final String validUserName = "ValidUser";
-    final String invalidUserName = "InvalidUser";
+    final String validName = "ValidUser";
+    final String invalidName = "InvalidUser";
+    final String existingName = "ExistingUser";
+    final String validUpdateName = "UpdatedName";
+    final String invalidUpdateName = "InvalidUpdatedName";
 
-    final User validUser = User(id: validId, name: validUserName, email: validEmail);
-    final FailedToRegisterAccount failedToRegisterAccount = FailedToRegisterAccount(errorObject: "Failed to register.");
+    final User validUser = User(id: validId, name: validName, email: validEmail);
+    final User updatedUser = User(id: validId, name: validUpdateName, email: validEmail);
+
+    final AccountNotLoggedIn accountNotLoggedIn = AccountNotLoggedIn(errorObject: "User is not logged in");
+    final FailedToRegisterAccount failedToRegisterAccount = FailedToRegisterAccount(errorObject: "Failed to register account.");
+    final InvalidUserName invalidUserName = InvalidUserName(errorObject: "Invalid user name.");
+    final FailedToQueryUsers failedToQueryUsers = FailedToQueryUsers(errorObject: "Failed to query users.");
+    final FailedToCreateUser failedToCreateUser = FailedToCreateUser(errorObject: "Failed to create user.");
+    final FailedToUpdateUser failedToUpdateUser = FailedToUpdateUser(errorObject: "Failed to update user.");
     final WrongLoginCredentials wrongLoginCredentials = WrongLoginCredentials(errorObject: "Wrong email or password.");
     final FailedToLogoutAccount failedToLogoutAccount = FailedToLogoutAccount(errorObject: "Failed to logout.");
-    final FailedToDeleteAccount failedToDeleteAccount = FailedToDeleteAccount(errorObject: "Failed to delete.");
+    final FailedToDeleteAccount failedToDeleteAccount = FailedToDeleteAccount(errorObject: "Failed to delete account.");
+    final FailedToDeleteUser failedToDeleteUser = FailedToDeleteUser(errorObject: "Failed to delete user.");
+    final FailedToGetAccount failedToGetAccount = FailedToGetAccount(errorObject: "Failed to get logged in user.");
     final UserNameAlreadyInUse userNameAlreadyInUse = UserNameAlreadyInUse(errorObject: "User name is already in use.");
 
     setUp(() {
@@ -240,7 +252,7 @@ void main() async {
     });
 
     blocTest(
-      'Nothing emitted when created, initial state == UserInitial',
+      'InitialState, bloc created, Nothing emitted and state is UserInitial',
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
@@ -249,11 +261,12 @@ void main() async {
     );
 
     blocTest(
-      'Emits UserLoginSuccess on UserStarted Event (which should be sent on app startup)',
+      'UserStarted, app startup with authentication token, Emits UserLoginSuccess',
       setUp: () {
         when(
               () => authenticationRepository.isUserLoggedIn,
         ).thenReturn(true);
+
         when(
               () => authenticationRepository.getLoggedInUser(),
         ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
@@ -267,64 +280,223 @@ void main() async {
     );
 
     blocTest(
-      'Emits UserRegisterSuccess on UserRegister Event',
+      'UserStarted, app startup without authentication token, Emits UserLoginFailure',
       setUp: () {
         when(
-              () => authenticationRepository.registerUser(email: validEmail, password: validPassword, userName: validUserName),
-        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
-        when(
-              () => userRepository.createUser(user: validUser),
-        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
-        when(
-              () => userRepository.userExists(userName: validUserName),
-        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.right(false)));
+              () => authenticationRepository.isUserLoggedIn,
+        ).thenReturn(false);
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
-      act: (bloc) => bloc.add(UserRegister(email: validEmail, password: validPassword, name: validUserName)),
+      act: (bloc) => bloc.add(UserStarted()),
+      expect: () => [UserLoginInProgress(), UserLoginFailure(error: accountNotLoggedIn)],
+      verify: (bloc) => bloc.state is UserLoginFailure,
+    );
+
+    blocTest(
+      'UserRegister, valid data, Emits UserRegisterSuccess',
+      setUp: () {
+        when(
+              () => userRepository.userExists(userName: validName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.right(false)));
+
+        when(
+              () => authenticationRepository.registerUser(email: validEmail, password: validPassword, userName: validName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
+
+        when(
+              () => userRepository.createUser(user: validUser),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserRegister(email: validEmail, password: validPassword, name: validName)),
       expect: () => [UserRegisterInProgress(), UserRegisterSuccess(user: validUser)],
       verify: (bloc) => bloc.state is UserRegisterSuccess,
     );
 
     blocTest(
-      'Emits UserRegisterFailure on UserRegister Event with invalid data',
+      'UserRegister, invalid user name, Emits UserRegisterFailure',
       setUp: () {
         when(
-              () => authenticationRepository.registerUser(email: invalidEmail, password: invalidPassword, userName: invalidUserName),
-        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(failedToRegisterAccount)));
-        when(
-              () => userRepository.userExists(userName: invalidUserName),
-        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.right(false)));
+              () => userRepository.userExists(userName: invalidName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.left(invalidUserName)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
-      act: (bloc) => bloc.add(UserRegister(email: invalidEmail, password: invalidPassword, name: invalidUserName)),
-      expect: () => [UserRegisterInProgress(), UserRegisterFailure(error: failedToRegisterAccount)],
+      act: (bloc) => bloc.add(UserRegister(email: validEmail, password: validPassword, name: invalidName)),
+      expect: () => [UserRegisterInProgress(), UserRegisterFailure(error: invalidUserName)],
       verify: (bloc) => bloc.state is UserRegisterFailure,
     );
 
     blocTest(
-      'Emits UserRegisterFailure on UserRegister Event with existing user name',
+      'UserRegister, failed to query if user exists, Emits UserRegisterFailure',
       setUp: () {
         when(
-              () => authenticationRepository.registerUser(email: invalidEmail, password: invalidPassword, userName: invalidUserName),
-        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(failedToRegisterAccount)));
+              () => userRepository.userExists(userName: validName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.left(failedToQueryUsers)));
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserRegister(email: validName, password: validPassword, name: validName)),
+      expect: () => [UserRegisterInProgress(), UserRegisterFailure(error: failedToQueryUsers)],
+      verify: (bloc) => bloc.state is UserRegisterFailure,
+    );
+
+    blocTest(
+      'UserRegister, existing user name, Emits UserRegisterFailure',
+      setUp: () {
         when(
-              () => userRepository.userExists(userName: invalidUserName),
+              () => userRepository.userExists(userName: existingName),
         ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.right(true)));
       },
       build: () => UserBloc(
           authenticationRepository: authenticationRepository,
           userRepository: userRepository),
-      act: (bloc) => bloc.add(UserRegister(email: invalidEmail, password: invalidPassword, name: invalidUserName)),
+      act: (bloc) => bloc.add(UserRegister(email: validEmail, password: validPassword, name: existingName)),
       expect: () => [UserRegisterInProgress(), UserRegisterFailure(error: userNameAlreadyInUse)],
       verify: (bloc) => bloc.state is UserRegisterFailure,
     );
 
     blocTest(
-      'Emits UserLoginSuccess on UserLogin Event',
+      'UserRegister, invalid data, Emits UserRegisterFailure',
+      setUp: () {
+        when(
+              () => userRepository.userExists(userName: invalidName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.right(false)));
+
+        when(
+              () => authenticationRepository.registerUser(email: invalidEmail, password: invalidPassword, userName: invalidName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(failedToRegisterAccount)));
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserRegister(email: invalidEmail, password: invalidPassword, name: invalidName)),
+      expect: () => [UserRegisterInProgress(), UserRegisterFailure(error: failedToRegisterAccount)],
+      verify: (bloc) => bloc.state is UserRegisterFailure,
+    );
+
+    blocTest(
+      'UserRegister, user repository failure, Emits UserRegisterFailure',
+      setUp: () {
+        when(
+              () => userRepository.userExists(userName: validName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.right(false)));
+
+        when(
+              () => authenticationRepository.registerUser(email: validEmail, password: validPassword, userName: validName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
+
+        when(
+              () => userRepository.createUser(user: validUser),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(failedToCreateUser)));
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserRegister(email: validEmail, password: validPassword, name: validName)),
+      expect: () => [UserRegisterInProgress(), UserRegisterFailure(error: failedToCreateUser)],
+      verify: (bloc) => bloc.state is UserRegisterFailure,
+    );
+
+    blocTest(
+      'UserUpdate, valid data, Emits UserUpdateSuccess',
+      setUp: () {
+        when(
+              () => userRepository.userExists(userName: validUpdateName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.right(false)));
+
+        when(
+              () => authenticationRepository.updateUser(userName: validUpdateName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(updatedUser)));
+
+        when(
+              () => userRepository.updateUser(user: updatedUser),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(updatedUser)));
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserUpdate(name: validUpdateName)),
+      expect: () => [UserUpdateInProgress(), UserUpdateSuccess(user: updatedUser)],
+      verify: (bloc) => bloc.state is UserUpdateSuccess,
+    );
+
+    blocTest(
+      'UserUpdate, invalid user name, Emits UserUpdateFailure',
+      setUp: () {
+        when(
+              () => userRepository.userExists(userName: invalidUpdateName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.left(invalidUserName)));
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserUpdate(name: invalidUpdateName)),
+      expect: () => [UserUpdateInProgress(), UserUpdateFailure(error: invalidUserName)],
+      verify: (bloc) => bloc.state is UserUpdateFailure,
+    );
+
+    blocTest(
+      'UserUpdate, failed to query if user exists, Emits UserUpdateFailure',
+      setUp: () {
+        when(
+              () => userRepository.userExists(userName: validUpdateName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.left(failedToQueryUsers)));
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserUpdate(name: validUpdateName)),
+      expect: () => [UserUpdateInProgress(), UserUpdateFailure(error: failedToQueryUsers)],
+      verify: (bloc) => bloc.state is UserUpdateFailure,
+    );
+
+    blocTest(
+      'UserUpdate, existing user name, Emits UserUpdateFailure',
+      setUp: () {
+        when(
+              () => userRepository.userExists(userName: existingName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.right(true)));
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserUpdate(name: existingName)),
+      expect: () => [UserUpdateInProgress(), UserUpdateFailure(error: userNameAlreadyInUse)],
+      verify: (bloc) => bloc.state is UserUpdateFailure,
+    );
+
+    blocTest(
+      'UserUpdate, user repository failure, Emits UserUpdateFailure',
+      setUp: () {
+        when(
+              () => userRepository.userExists(userName: validUpdateName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, bool>>.value(Either.right(false)));
+
+        when(
+              () => authenticationRepository.updateUser(userName: validUpdateName),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(updatedUser)));
+
+        when(
+              () => userRepository.updateUser(user: updatedUser),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(failedToUpdateUser)));
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserUpdate(name: validUpdateName)),
+      expect: () => [UserUpdateInProgress(), UserUpdateFailure(error: failedToUpdateUser)],
+      verify: (bloc) => bloc.state is UserUpdateFailure,
+    );
+
+    blocTest(
+      'UserLogin, valid login credentials, Emits UserLoginSuccess',
       setUp: () {
         when(
               () => authenticationRepository.loginUser(email: validEmail, password: validPassword),
@@ -339,7 +511,7 @@ void main() async {
     );
 
     blocTest(
-      'Emits UserLoginFailure on UserLogin Event with invalid data',
+      'UserLogin, invalid login credentials, Emits UserLoginFailure',
       setUp: () {
         when(
               () => authenticationRepository.loginUser(email: invalidEmail, password: invalidPassword),
@@ -354,7 +526,7 @@ void main() async {
     );
 
     blocTest(
-      'Emits UserLogoutSuccess on UserLogout Event',
+      'UserLogout, no repository errors, Emits UserLogoutSuccess',
       setUp: () {
         when(
               () => authenticationRepository.logoutUser(),
@@ -369,7 +541,7 @@ void main() async {
     );
 
     blocTest(
-      'Emits UserLogoutFailure on UserLogout Event',
+      'UserLogout, unable to log out user, Emits UserLogoutFailure',
       setUp: () {
         when(
               () => authenticationRepository.logoutUser(),
@@ -384,8 +556,16 @@ void main() async {
     );
 
     blocTest(
-      'Emits UserDeleteSuccess on UserDelete Event',
+      'UserDelete, no repository errors, Emits UserDeleteSuccess',
       setUp: () {
+        when(
+              () => authenticationRepository.getLoggedInUser(),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
+
+        when(
+              () => userRepository.deleteUser(id: validId),
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.none()));
+
         when(
               () => authenticationRepository.deleteUser(),
         ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.none()));
@@ -399,8 +579,16 @@ void main() async {
     );
 
     blocTest(
-      'Emits UserDeleteFailure on UserDelete Event invalid data',
+      'UserDelete, unable to delete user account, Emits UserDeleteFailure',
       setUp: () {
+        when(
+              () => authenticationRepository.getLoggedInUser(),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
+
+        when(
+              () => userRepository.deleteUser(id: validId),
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.none()));
+
         when(
               () => authenticationRepository.deleteUser(),
         ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.of(failedToDeleteAccount)));
@@ -410,6 +598,42 @@ void main() async {
           userRepository: userRepository),
       act: (bloc) => bloc.add(UserDelete()),
       expect: () => [UserDeleteInProgress(), UserDeleteFailure(error: failedToDeleteAccount)],
+      verify: (bloc) => bloc.state is UserDeleteFailure,
+    );
+
+    blocTest(
+      'UserDelete, unable to delete user, Emits UserDeleteFailure',
+      setUp: () {
+        when(
+              () => authenticationRepository.getLoggedInUser(),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
+
+        when(
+              () => userRepository.deleteUser(id: validId),
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.of(failedToDeleteUser)));
+
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserDelete()),
+      expect: () => [UserDeleteInProgress(), UserDeleteFailure(error: failedToDeleteUser)],
+      verify: (bloc) => bloc.state is UserDeleteFailure,
+    );
+
+    blocTest(
+      'UserDelete, user not logged in, Emits UserDeleteFailure',
+      setUp: () {
+        when(
+              () => authenticationRepository.getLoggedInUser(),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.left(failedToGetAccount)));
+
+      },
+      build: () => UserBloc(
+          authenticationRepository: authenticationRepository,
+          userRepository: userRepository),
+      act: (bloc) => bloc.add(UserDelete()),
+      expect: () => [UserDeleteInProgress(), UserDeleteFailure(error: failedToGetAccount)],
       verify: (bloc) => bloc.state is UserDeleteFailure,
     );
 
