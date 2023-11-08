@@ -201,10 +201,14 @@ void main() async {
     final AuthenticationRepository authenticationRepository = MockAuthenticationRepository();
 
     final UserId validId = "valid_id";
+    final UserId invalidId = "invalid_id";
     final String validEmail = "valid@email.com";
+    final String invalidEmail = "invalid@email.com";
     final String validUserName = "ValidUser";
+    final String invalidUserName = "InvalidUser";
 
     final User validUser = User(id: validId, name: validUserName, email: validEmail);
+    final User invalidUser = User(id: invalidId, name: invalidUserName, email: invalidEmail);
 
     final String validCliqueName1 = "validCliqueName1";
     final Clique validClique1 = Clique(name: validCliqueName1, creatorId: validId);
@@ -213,11 +217,19 @@ void main() async {
     final String validCliqueName2 = "validCliqueName2";
     final Clique validClique2 = Clique(name: validCliqueName2, creatorId: validId);
     final CliqueId validCliqueId2 = validClique2.id;
+    
+    final invalidCliqueName = "invalidCliqueName";
+    final CliqueId invalidCliqueId = "invalidCliqueId";
 
     Stream<List<Clique>> cliqueStream() async* {
       yield [validClique1];
       yield [validClique1, validClique2];
     }
+
+    final FailedToStreamCliques failedToStreamCliques = FailedToStreamCliques(errorObject: "Failed to stream cliques.");
+    final FailedToCreateClique failedToCreateClique = FailedToCreateClique(errorObject: "Failed to create clique.");
+    final FailedToDeleteClique failedToDeleteClique = FailedToDeleteClique(errorObject: "Failed to delete clique.");
+    final UserPermissionViolation userPermissionViolation = UserPermissionViolation(errorObject: "Only the creator of a clique can delete it.");
 
     setUp(() {
       reset(cliqueRepository);
@@ -225,7 +237,7 @@ void main() async {
     });
 
     blocTest(
-      'Nothing emitted when created, initial state == CliquesInitial',
+      'InitialState, bloc created, Nothing emitted and state is CliquesInitial',
       build: () => CliquesBloc(
           cliqueRepository: cliqueRepository,
           authenticationRepository: authenticationRepository),
@@ -234,10 +246,10 @@ void main() async {
     );
 
     blocTest(
-      'Emits CliquesLoadingSuccess on CliquesLoadEvent',
+      'CliquesLoadEvent, valid data, Emits CliquesLoadingSuccess',
       setUp: () {
         when(
-          () => cliqueRepository.readAllCliques(),
+              () => cliqueRepository.readAllCliques(),
         ).thenAnswer((_) => Either<RepositoryError, Stream<List<Clique>>>.of(cliqueStream()));
       },
       build: () => CliquesBloc(
@@ -253,10 +265,25 @@ void main() async {
     );
 
     blocTest(
-      'Emits AddCliqueSuccess on AddClique',
+      'CliquesLoadEvent, clique repository failure, Emits CliquesLoadingFailure',
       setUp: () {
         when(
-          () => cliqueRepository.createClique(name: validCliqueName1, creatorId: validId),
+              () => cliqueRepository.readAllCliques(),
+        ).thenAnswer((_) => Either<RepositoryError, Stream<List<Clique>>>.left(failedToStreamCliques));
+      },
+      build: () => CliquesBloc(
+          cliqueRepository: cliqueRepository,
+          authenticationRepository: authenticationRepository),
+      act: (bloc) => bloc.add(CliquesLoad()),
+      expect: () => [CliquesLoadingInProgress(), CliquesLoadingFailure(error: failedToStreamCliques)],
+      verify: (bloc) => bloc.state is CliquesLoadingFailure,
+    );
+
+    blocTest(
+      'AddClique, valid data, Emits AddCliqueSuccess',
+      setUp: () {
+        when(
+              () => cliqueRepository.createClique(name: validCliqueName1, creatorId: validId),
         ).thenAnswer((_) => Future<Either<RepositoryError, Clique>>.value(Either.of(validClique1)));
 
         when(
@@ -272,10 +299,29 @@ void main() async {
     );
 
     blocTest(
-      'Emits RemoveCliqueSuccess on RemoveClique',
+      'AddClique, invalid data, Emits AddCliqueFailure',
       setUp: () {
         when(
-          () => cliqueRepository.deleteClique(cliqueId: validCliqueId1),
+              () => cliqueRepository.createClique(name: invalidCliqueName, creatorId: validId),
+        ).thenAnswer((_) => Future<Either<RepositoryError, Clique>>.value(Either.left(failedToCreateClique)));
+
+        when(
+              () => authenticationRepository.getLoggedInUser(),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
+      },
+      build: () => CliquesBloc(
+          cliqueRepository: cliqueRepository,
+          authenticationRepository: authenticationRepository),
+      act: (bloc) => bloc.add(AddClique(name: invalidCliqueName)),
+      expect: () => [AddCliqueInProgress(), AddCliqueFailure(error: failedToCreateClique)],
+      verify: (bloc) => bloc.state is AddCliqueSuccess,
+    );
+
+    blocTest(
+      'RemoveClique, valid data, Emits RemoveCliqueSuccess',
+      setUp: () {
+        when(
+              () => cliqueRepository.deleteClique(cliqueId: validCliqueId1),
         ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.none()));
 
         when(
@@ -292,6 +338,44 @@ void main() async {
       act: (bloc) => bloc.add(RemoveClique(cliqueId: validCliqueId1)),
       expect: () => [RemoveCliqueInProgress(), RemoveCliqueSuccess()],
       verify: (bloc) => bloc.state is RemoveCliqueSuccess,
+    );
+
+    blocTest(
+      'RemoveClique, invalid data, Emits RemoveCliqueFailure',
+      setUp: () {
+        when(
+              () => authenticationRepository.getLoggedInUser(),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(validUser)));
+
+        when(
+              () => cliqueRepository.getClique(cliqueId: invalidCliqueId),
+        ).thenAnswer((_) => Future<Either<RepositoryError, Clique>>.value(Either.left(failedToDeleteClique)));
+      },
+      build: () => CliquesBloc(
+          cliqueRepository: cliqueRepository,
+          authenticationRepository: authenticationRepository),
+      act: (bloc) => bloc.add(RemoveClique(cliqueId: invalidCliqueId)),
+      expect: () => [RemoveCliqueInProgress(), RemoveCliqueFailure(error: failedToDeleteClique)],
+      verify: (bloc) => bloc.state is RemoveCliqueFailure,
+    );
+
+    blocTest(
+      'RemoveClique, user permission error, Emits RemoveCliqueFailure',
+      setUp: () {
+        when(
+              () => authenticationRepository.getLoggedInUser(),
+        ).thenAnswer((_) => Future<Either<RepositoryError, User>>.value(Either.right(invalidUser)));
+
+        when(
+              () => cliqueRepository.getClique(cliqueId: validCliqueId1),
+        ).thenAnswer((_) => Future<Either<RepositoryError, Clique>>.value(Either.right(validClique1)));
+      },
+      build: () => CliquesBloc(
+          cliqueRepository: cliqueRepository,
+          authenticationRepository: authenticationRepository),
+      act: (bloc) => bloc.add(RemoveClique(cliqueId: validCliqueId1)),
+      expect: () => [RemoveCliqueInProgress(), RemoveCliqueFailure(error: userPermissionViolation)],
+      verify: (bloc) => bloc.state is RemoveCliqueFailure,
     );
 
   });
