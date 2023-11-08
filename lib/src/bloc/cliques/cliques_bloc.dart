@@ -187,10 +187,11 @@ final class CliquesBloc extends Bloc<CliquesEvent, CliquesState> {
 
     Either<RepositoryError, User> userResult = await _authRepo.getLoggedInUser();
 
-    bool userHasPermission = await userResult.match(
+    bool userHasPermission = false;
+    bool error = await userResult.match(
             (l) async {
               emit(RemoveCliqueFailure(error: l));
-              return false;
+              return true;
             },
             (rUser) async {
               Either<RepositoryError, Clique> cliqueResult = await _cliqueRepo.getClique(cliqueId: event.cliqueId);
@@ -198,14 +199,17 @@ final class CliquesBloc extends Bloc<CliquesEvent, CliquesState> {
               return cliqueResult.match(
                       (l) {
                         emit(RemoveCliqueFailure(error: l));
-                        return false;
+                        return true;
                       },
                       (rClique) {
-                        return rClique.creatorId == rUser.id;
+                        userHasPermission = rClique.creatorId == rUser.id;
+                        return false;
                       }
               );
             }
     );
+
+    if(error) return;
 
     if(userHasPermission) {
       Option<RepositoryError> result = await _cliqueRepo.deleteClique(cliqueId: event.cliqueId);
