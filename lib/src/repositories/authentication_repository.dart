@@ -73,7 +73,6 @@ class AuthenticationRepository {
   /// * [InvalidUserName] if the username is empty or just whitespace.
   /// * [FailedToUpdateAccount] if the auth server fails to update the users name.
   /// * [FailedToGetAccount] if the auth server fails to retrieve the user.
-  // TODO: tests
   Future<Either<RepositoryError, User>> updateUser({required String userName}) async {
     userName = sanitizeUserName(userName);
     if(userName.isEmpty) return Either.left(InvalidUserName(errorObject: "Invalid user name, can not be empty or only whitespace."));

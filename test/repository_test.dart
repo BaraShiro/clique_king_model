@@ -20,13 +20,16 @@ void main() {
 
     final UserId validId = "valid_id";
     final String validEmail = "valid@email.com";
-    final String invalidEmail = "invalid@email.com";
+    final String invalidEmail = "invalid email";
     final String validPassword = "valid_password";
-    final String invalidPassword = "invalid_password";
+    final String invalidPassword = "invalid";
     final String validUserName = "ValidUser";
-    final String invalidUserName = "InvalidUser";
+    final String invalidUserName = " ";
+    final String validUpdateName = "ValidUpdatedName";
 
     final User validUser = User(id: validId, name: validUserName, email: validEmail);
+    final User updatedUser = User(id: validId, name: validUpdateName, email: validEmail);
+    final User badUser = User(id: "bad_id", name: "bad_name", email: "bad_email");
 
     final Map<String, dynamic> userWithoutNameMap = {
       'localId': validId,
@@ -44,54 +47,42 @@ void main() {
       'emailVerified': null,
     };
 
+    final Map<String, dynamic> userWithUpdatedNameMap = {
+      'localId': validId,
+      'displayName': validUpdateName,
+      'photoUrl': null,
+      'email': validEmail,
+      'emailVerified': null,
+    };
+
     final user_gateway.User authUserWithoutName = user_gateway.User.fromMap(userWithoutNameMap);
     final user_gateway.User authUserWithName = user_gateway.User.fromMap(userWithNameMap);
+    final user_gateway.User authUserWithUpdatedName = user_gateway.User.fromMap(userWithUpdatedNameMap);
 
     setUp(() {
       reset(mockFirebaseAuth);
-
-      when(
-        () => mockFirebaseAuth.signUp(validEmail, validPassword)
-      ).thenAnswer((_) => Future<user_gateway.User>.value(authUserWithoutName));
-
-      when(
-        () => mockFirebaseAuth.updateProfile(displayName: validUserName)
-      ).thenAnswer((_) => Future<void>.value());
-
-      when(
-        () => mockFirebaseAuth.getUser()
-      ).thenAnswer((_) => Future<user_gateway.User>.value(authUserWithName));
-
-      when(
-        () => mockFirebaseAuth.signUp(invalidEmail, invalidPassword)
-      ).thenThrow(Exception("Repository Error"));
-
-      when(
-        () => mockFirebaseAuth.signIn(validEmail, validPassword)
-      ).thenAnswer((_) => Future<user_gateway.User>.value(authUserWithName));
-
-      when(
-        () => mockFirebaseAuth.signIn(invalidEmail, invalidPassword)
-      ).thenThrow(Exception("Repository Error"));
-
-      when(
-        () => mockFirebaseAuth.signOut()
-      ).thenAnswer((_) => {});
-
-      when(
-        () => mockFirebaseAuth.deleteAccount()
-      ).thenAnswer((_) => Future<void>.value());
-
     });
 
     test("registerUser(), called with valid data, returns a valid User", () async {
+
+      when(
+              () => mockFirebaseAuth.signUp(validEmail, validPassword)
+      ).thenAnswer((_) => Future<user_gateway.User>.value(authUserWithoutName));
+
+      when(
+              () => mockFirebaseAuth.updateProfile(displayName: validUserName)
+      ).thenAnswer((_) => Future<void>.value());
+
+      when(
+              () => mockFirebaseAuth.getUser()
+      ).thenAnswer((_) => Future<user_gateway.User>.value(authUserWithName));
 
       final Either<RepositoryError, User> result = await authenticationRepository.registerUser(
           email: validEmail,
           password: validPassword,
           userName: validUserName,
       );
-      User user = result.getOrElse((l) => throw Exception("Not a valid User"));
+      User user = result.getOrElse((l) => badUser);
 
       expect(user, equals(validUser));
     });
@@ -107,15 +98,36 @@ void main() {
       expect(result.isLeft(), isTrue);
     });
 
+    test("updateUser(), called with valid data, returns a updated User", () async {
+
+      when(
+              () => mockFirebaseAuth.updateProfile(displayName: validUpdateName)
+      ).thenAnswer((_) => Future<void>.value());
+
+      when(
+              () => mockFirebaseAuth.getUser()
+      ).thenAnswer((_) => Future<user_gateway.User>.value(authUserWithUpdatedName));
+
+      final Either<RepositoryError, User> result = await authenticationRepository.updateUser(userName: validUpdateName);
+      User user = result.getOrElse((l) => badUser);
+
+      expect(user, equals(updatedUser));
+    });
+
     test("getLoggedInUser(), called when user is logged in, returns a valid User", () async {
 
+      when(
+              () => mockFirebaseAuth.getUser()
+      ).thenAnswer((_) => Future<user_gateway.User>.value(authUserWithName));
+
       final Either<RepositoryError, User> result = await authenticationRepository.getLoggedInUser();
-      final User user = result.getOrElse((l) => throw Exception("Not a valid User"));
+      final User user = result.getOrElse((l) => badUser);
 
       expect(user, equals(validUser));
     });
 
     test("getLoggedInUser(), called when user is not logged in, returns a RepositoryError", () async {
+
       when(
               () => mockFirebaseAuth.getUser()
       ).thenThrow(Exception("Repository Error"));
@@ -127,16 +139,24 @@ void main() {
 
     test("loginUser(), called with valid data, returns a valid User", () async {
 
+      when(
+        () => mockFirebaseAuth.signIn(validEmail, validPassword)
+      ).thenAnswer((_) => Future<user_gateway.User>.value(authUserWithName));
+
       final Either<RepositoryError, User> result = await authenticationRepository.loginUser(
           email: validEmail,
           password: validPassword,
       );
-      User user = result.getOrElse((l) => throw Exception("Not a valid User"));
+      User user = result.getOrElse((l) => badUser);
 
       expect(user, equals(validUser));
     });
 
     test("loginUser(), called with invalid data, returns a RepositoryError", () async {
+
+      when(
+        () => mockFirebaseAuth.signIn(invalidEmail, invalidPassword)
+      ).thenThrow(Exception("Repository Error"));
 
       final Either<RepositoryError, User> result = await authenticationRepository.loginUser(
         email: invalidEmail,
@@ -148,6 +168,10 @@ void main() {
 
     test("logoutUser(), called, FirebaseAuth.signOut() is called", () async {
 
+      when(
+        () => mockFirebaseAuth.signOut()
+      ).thenAnswer((_) => {});
+
       Option<RepositoryError> result = await authenticationRepository.logoutUser();
 
       verify(() => mockFirebaseAuth.signOut());
@@ -155,6 +179,10 @@ void main() {
     });
 
     test("deleteUser(), called, FirebaseAuth.deleteAccount() is called", () async {
+
+      when(
+        () => mockFirebaseAuth.deleteAccount()
+      ).thenAnswer((_) => Future<void>.value());
 
       Option<RepositoryError> result = await authenticationRepository.deleteUser();
 
