@@ -12,7 +12,6 @@ void main() async {
 
   group('Clique Bloc tests', () {
     final CliqueRepository cliqueRepository = MockCliqueRepository();
-    final UserRepository userRepository = MockUserRepository();
 
     final UserId validId = "valid_id";
     final String validEmail = "valid@email.com";
@@ -38,9 +37,8 @@ void main() async {
       yield [score1, score42, score5];
     }
 
-    setUpAll(() {
+    setUp(() {
       reset(cliqueRepository);
-      reset(userRepository);
     });
 
     blocTest(
@@ -139,8 +137,9 @@ void main() async {
       yield [validClique1, validClique2];
     }
 
-    setUpAll(() {
+    setUp(() {
       reset(cliqueRepository);
+      reset(authenticationRepository);
     });
 
     blocTest(
