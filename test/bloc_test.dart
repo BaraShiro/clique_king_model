@@ -14,14 +14,19 @@ void main() async {
     final CliqueRepository cliqueRepository = MockCliqueRepository();
 
     final UserId validId = "valid_id";
+    final UserId invalidId = "invalid_id";
     final String validEmail = "valid@email.com";
+    final String invalidEmail = "invalid@email.com";
     final String validUserName = "ValidUser";
+    final String invalidUserName = "InvalidUser";
 
     final User validUser = User(id: validId, name: validUserName, email: validEmail);
+    final User invalidUser = User(id: invalidId, name: invalidUserName, email: invalidEmail);
 
     final String validCliqueName = "validCliqueName";
     final Clique validClique = Clique(name: validCliqueName, creatorId: validId);
     final CliqueId validCliqueId = validClique.id;
+    final String invalidCliqueId = "validCliqueId";
 
     final int scoreIncrease = 1;
     final Score score = Score.fromUser(validUser);
@@ -37,12 +42,18 @@ void main() async {
       yield [score1, score42, score5];
     }
 
+    final FailedToReadClique failedToReadClique = FailedToReadClique(errorObject: "Failed to read clique.");
+    final FailedToReadScore failedToReadScore = FailedToReadScore(errorObject: "Failed to read score.");
+    final FailedToIncreaseScore failedToIncreaseScore = FailedToIncreaseScore(errorObject: "Failed to increase score.");
+    final FailedToAddUserToClique failedToAddUserToClique = FailedToAddUserToClique(errorObject: "Failed to add user to clique.");
+    final FailedToRemoveUserFromClique failedToRemoveUserFromClique = FailedToRemoveUserFromClique(errorObject: "Failed to remove user from clique.");
+
     setUp(() {
       reset(cliqueRepository);
     });
 
     blocTest(
-      'Nothing emitted when created, initial state == CliqueInitial',
+      'InitialState, bloc created, Nothing emitted and state is CliqueInitial',
       build: () => CliqueBloc(
           cliqueRepository: cliqueRepository),
       expect: () => [],
@@ -50,14 +61,15 @@ void main() async {
     );
 
     blocTest(
-      'Emits CliqueLoadingSuccess on CliqueLoad Event',
+      'CliqueLoad, valid data, Emits CliqueLoadingSuccess and with all scores sorted',
       setUp: () {
         when(
-          () => cliqueRepository.readScoresFromClique(cliqueId: validCliqueId),
-        ).thenAnswer((_) => Either<RepositoryError, Stream<List<Score>>>.of(scoreStream()));
-        when(
-          () => cliqueRepository.getClique(cliqueId: validCliqueId),
+              () => cliqueRepository.getClique(cliqueId: validCliqueId),
         ).thenAnswer((_) => Future<Either<RepositoryError, Clique>>.value(Either.of(validClique)));
+
+        when(
+              () => cliqueRepository.readScoresFromClique(cliqueId: validCliqueId),
+        ).thenAnswer((_) => Either<RepositoryError, Stream<List<Score>>>.of(scoreStream()));
       },
       build: () => CliqueBloc(cliqueRepository: cliqueRepository),
       act: (bloc) => bloc.add(CliqueLoad(cliqueId: validCliqueId)),
@@ -71,11 +83,25 @@ void main() async {
     );
 
     blocTest(
-      'Emits CliqueIncreaseScoreSuccess on CliqueIncreaseScore Event',
+      'CliqueLoad, invalid data, Emits CliqueLoadingFailure',
+      setUp: () {
+        when(
+              () => cliqueRepository.getClique(cliqueId: invalidCliqueId),
+        ).thenAnswer((_) => Future<Either<RepositoryError, Clique>>.value(Either.left(failedToReadClique)));
+      },
+      build: () => CliqueBloc(cliqueRepository: cliqueRepository),
+      act: (bloc) => bloc.add(CliqueLoad(cliqueId: invalidCliqueId)),
+      expect: () => [CliqueLoadingInProgress(),CliqueLoadingFailure(error: failedToReadClique)],
+      verify: (bloc) => bloc.state is CliqueLoadingFailure,
+    );
+
+    blocTest(
+      'CliqueIncreaseScore, valid data, Emits CliqueIncreaseScoreSuccess',
       setUp: () {
         when(
           () => cliqueRepository.getScore(cliqueId: validCliqueId, userId: validId),
         ).thenAnswer((_) => Future<Either<RepositoryError, Score>>.value(Either.of(score)));
+
         when(
           () => cliqueRepository.increaseScore(cliqueId: validCliqueId, score: score, scoreIncrease: scoreIncrease),
         ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.none()));
@@ -87,7 +113,37 @@ void main() async {
     );
 
     blocTest(
-      'Emits CliqueJoinSuccess on CliqueJoin Event',
+      'CliqueIncreaseScore, invalid data, Emits CliqueIncreaseScoreFailure',
+      setUp: () {
+        when(
+              () => cliqueRepository.getScore(cliqueId: invalidCliqueId, userId: invalidId),
+        ).thenAnswer((_) => Future<Either<RepositoryError, Score>>.value(Either.left(failedToReadScore)));
+      },
+      build: () => CliqueBloc(cliqueRepository: cliqueRepository),
+      act: (bloc) => bloc.add(CliqueIncreaseScore(cliqueId: invalidCliqueId, user: invalidUser, increase: scoreIncrease)),
+      expect: () => [CliqueIncreaseScoreInProgress(), CliqueIncreaseScoreFailure(error: failedToReadScore)],
+      verify: (bloc) => bloc.state is CliqueIncreaseScoreFailure,
+    );
+
+    blocTest(
+      'CliqueIncreaseScore, clique repository failure, Emits CliqueIncreaseScoreFailure',
+      setUp: () {
+        when(
+              () => cliqueRepository.getScore(cliqueId: validCliqueId, userId: validId),
+        ).thenAnswer((_) => Future<Either<RepositoryError, Score>>.value(Either.of(score)));
+
+        when(
+              () => cliqueRepository.increaseScore(cliqueId: validCliqueId, score: score, scoreIncrease: scoreIncrease),
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.of(failedToIncreaseScore)));
+      },
+      build: () => CliqueBloc(cliqueRepository: cliqueRepository),
+      act: (bloc) => bloc.add(CliqueIncreaseScore(cliqueId: validCliqueId, user: validUser, increase: scoreIncrease)),
+      expect: () => [CliqueIncreaseScoreInProgress(), CliqueIncreaseScoreFailure(error: failedToIncreaseScore)],
+      verify: (bloc) => bloc.state is CliqueIncreaseScoreFailure,
+    );
+
+    blocTest(
+      'CliqueJoin, valid data, Emits CliqueJoinSuccess',
       setUp: () {
         when(
           () => cliqueRepository.addUser(cliqueId: validCliqueId, user: validUser),
@@ -100,7 +156,20 @@ void main() async {
     );
 
     blocTest(
-      'Emits CliqueLeaveSuccess on CliqueLeave Event',
+      'CliqueJoin, invalid data, Emits CliqueJoinFailure',
+      setUp: () {
+        when(
+              () => cliqueRepository.addUser(cliqueId: invalidCliqueId, user: invalidUser),
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.of(failedToAddUserToClique)));
+      },
+      build: () => CliqueBloc(cliqueRepository: cliqueRepository),
+      act: (bloc) => bloc.add(CliqueJoin(cliqueId: invalidCliqueId, user: invalidUser)),
+      expect: () => [CliqueJoinInProgress(), CliqueJoinFailure(error: failedToAddUserToClique)],
+      verify: (bloc) => bloc.state is CliqueJoinFailure,
+    );
+
+    blocTest(
+      'CliqueLeave, valid data, Emits CliqueLeaveSuccess',
       setUp: () {
         when(
               () => cliqueRepository.removeUser(cliqueId: validCliqueId, userId: validId),
@@ -110,6 +179,19 @@ void main() async {
       act: (bloc) => bloc.add(CliqueLeave(cliqueId: validCliqueId, user: validUser)),
       expect: () => [CliqueLeaveInProgress(), CliqueLeaveSuccess()],
       verify: (bloc) => bloc.state is CliqueLeaveSuccess,
+    );
+
+    blocTest(
+      'CliqueLeave, invalid data, Emits CliqueLeaveFailure',
+      setUp: () {
+        when(
+              () => cliqueRepository.removeUser(cliqueId: invalidCliqueId, userId: invalidId),
+        ).thenAnswer((_) => Future<Option<RepositoryError>>.value(Option.of(failedToRemoveUserFromClique)));
+      },
+      build: () => CliqueBloc(cliqueRepository: cliqueRepository),
+      act: (bloc) => bloc.add(CliqueLeave(cliqueId: invalidCliqueId, user: invalidUser)),
+      expect: () => [CliqueLeaveInProgress(), CliqueLeaveFailure(error: failedToRemoveUserFromClique)],
+      verify: (bloc) => bloc.state is CliqueLeaveFailure,
     );
 
   });
